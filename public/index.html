@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Moderator Control | CuePi</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0f172a">
+    <link rel="apple-touch-icon" href="/icon.svg">
+
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        :root {
+            --bg: #0f172a; --card: #1e293b; --border: #334155;
+            --text: #f8fafc; --text-dim: #94a3b8; --blue: #2563eb;
+            --green: #16a34a; --amber: #d97706; --red: #dc2626;
+        }
+        * { box-sizing: border-box; }
+        body { font-family: sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .grid { display: grid; grid-template-columns: 1fr; gap: 30px; }
+        @media (min-width: 1024px) { .grid { grid-template-columns: 1.5fr 1fr; } }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 25px; }
+        h2 { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--text-dim); margin: 0 0 15px 0; }
+        
+        .monitor { aspect-ratio: 16/9; background: #000; border-radius: 15px; position: relative; display: flex; align-items: center; justify-content: center; border: 1px solid #000; overflow: hidden; }
+        .monitor-time { font-family: monospace; font-size: 80px; font-weight: 900; color: #22c55e; z-index: 2; position: relative; transition: color 0.2s; }
+        
+        .msg-preview { margin-top: 15px; padding: 15px; border-radius: 12px; background: rgba(0,0,0,0.3); border-left: 4px solid var(--border); }
+        .msg-status-badge { float: right; font-size: 10px; padding: 4px 8px; border-radius: 4px; font-weight: 900; }
+        .status-live { background: var(--red); color: white; animation: pulse 1.5s infinite; }
+        .status-off { background: #334155; color: var(--text-dim); }
+
+        /* Transport Buttons Base */
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .btn { border: none; border-radius: 15px; cursor: pointer; font-weight: 900; padding: 20px; color: #fff; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+        .btn:active { transform: scale(0.95); }
+        
+        /* Icon Containers */
+        .icon-circle { background: rgba(255,255,255,0.2); padding: 12px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .icon-circle svg { width: 32px; height: 32px; }
+
+        /* Specific Colors */
+        .btn-start { background: var(--green); height: 160px; box-shadow: 0 10px 20px rgba(22, 163, 74, 0.2); }
+        .btn-pause { background: var(--amber); height: 160px; box-shadow: 0 10px 20px rgba(217, 119, 6, 0.2); }
+        .btn-reset { background: #475569; height: 160px; color: #cbd5e1; }
+        .btn-blue { background: rgba(37, 99, 235, 0.1); color: #60a5fa; border: 1px solid rgba(37, 99, 235, 0.2); padding: 15px; }
+        .btn-dim { background: #334155; color: #94a3b8; padding: 15px; }
+
+        .btn-toggle { height: 60px; width: 100%; margin-top: 10px; border-radius: 12px; flex-direction: row; }
+        .btn-toggle-on { background: var(--red); }
+        .btn-toggle-off { background: var(--blue); }
+
+        .preset-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
+        .preset-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+        .preset-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+        .btn-preset { background: rgba(71, 85, 105, 0.4); border: 1px solid transparent; padding: 15px; border-radius: 12px; color: #fff; font-weight: 900; cursor: pointer; transition: all 0.2s; }
+        .btn-preset:hover { background: rgba(71, 85, 105, 0.6); }
+
+        .btn-msg-bank {
+            background: linear-gradient(145deg, #1e293b, #0f172a); border: 1px solid #334155; padding: 15px 15px 15px 40px; border-radius: 12px; color: #fff; font-weight: 700; cursor: pointer; transition: all 0.2s; position: relative; text-align: left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+        }
+        .msg-number-badge { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); background: #334155; color: #94a3b8; font-size: 10px; font-weight: 900; padding: 4px 6px; border-radius: 6px; }
+
+        .custom-time-row { display: flex; gap: 10px; align-items: stretch; }
+        .input-compact, .msg-input { background: #0f172a; border: 1px solid #334155; border-radius: 12px; color: #fff; padding: 15px; font-weight: 700; outline: none; font-size: 14px; }
+        .input-compact { flex: 1; }
+        .msg-input { width: 100%; margin-bottom: 10px; }
+        .btn-set { background: var(--blue); padding: 0 25px; border-radius: 12px; border: none; color: #fff; font-weight: 900; cursor: pointer; font-size: 12px; letter-spacing: 1px; }
+        
+        .ip-badge { background: #1e293b; padding: 8px 15px; border-radius: 8px; font-family: monospace; border: 1px solid #334155; font-size: 14px; color: #60a5fa;}
+        .btn-header-danger { background: rgba(220, 38, 38, 0.1); color: var(--red); border: 1px solid rgba(220, 38, 38, 0.3); padding: 8px 15px; border-radius: 8px; font-weight: 900; font-size: 12px; cursor: pointer; margin-left: 10px; letter-spacing: 1px;}
+
+        /* Modal Styles */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content { background: var(--card); border: 1px solid var(--border); padding: 30px; border-radius: 24px; width: 500px; max-height: 90vh; overflow-y: auto; transform: translateY(20px); transition: transform 0.2s; }
+        .modal-overlay.active .modal-content { transform: translateY(0); }
+        .modal-title { color: #fff; font-size: 20px; font-weight: 900; letter-spacing: 1px; margin-top: 0; margin-bottom: 20px; display: flex; justify-content: space-between;}
+        
+        .sys-group { background: #0f172a; padding: 20px; border-radius: 15px; border: 1px solid #334155; margin-bottom: 15px; }
+        .sys-group h3 { margin: 0 0 15px 0; font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+        .sys-row { display: flex; gap: 10px; margin-bottom: 10px; }
+        .sys-input { flex: 1; background: #1e293b; border: 1px solid #334155; color: #fff; padding: 10px; border-radius: 8px; font-family: monospace;}
+        .sys-btn { background: var(--blue); color: white; border: none; padding: 10px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .sys-btn-warn { background: var(--amber); }
+        .sys-btn-danger { background: var(--red); }
+
+        /* Logo Management Specific Styles */
+        .logo-preview-box { width: 100%; height: 120px; background: #000; border: 1px solid #334155; border-radius: 12px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+        .logo-preview-box img { max-width: 90%; max-height: 90%; object-fit: contain; }
+        .logo-empty-text { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+        .mode-toggle { display:inline-flex; border:2px solid #14b8a6; border-radius:999px; overflow:hidden; height:36px; }
+        .mode-toggle button { border:none; background:transparent; color:#99f6e4; padding:0 16px; font-weight:700; cursor:pointer; }
+        .mode-toggle button.active { background:#14b8a6; color:#042f2e; }
+
+        .hidden { display: none; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+    <div id="settings-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-title">
+                SYSTEM SETTINGS
+                <button onclick="closeSettings()" style="background:none; border:none; color:white; font-size:20px; cursor:pointer;">×</button>
+            </div>
+            
+            <div class="sys-group">
+                <h3>Wi-Fi Connection</h3>
+                <div class="sys-row">
+                    <button onclick="scanWifi()" class="sys-btn" style="width: 100%;">SCAN NETWORKS</button>
+                </div>
+                <div class="sys-row hidden" id="wifi-select-row">
+                    <select id="wifi-ssid" class="sys-input" onchange="toggleWifiPass()"></select>
+                </div>
+                <div class="sys-row hidden" id="wifi-pass-row">
+                    <input type="password" id="wifi-pass" class="sys-input" placeholder="Password (if needed)">
+                    <button onclick="connectWifi()" class="sys-btn">CONNECT</button>
+                </div>
+                <p id="wifi-status" style="font-size: 11px; color: var(--green); margin:0;"></p>
+            </div>
+
+            <div class="sys-group">
+                <h3>Static IP (For Current Wi-Fi)</h3>
+                <p id="current-ip-info" style="font-size: 11px; color: var(--text-dim); margin-top: -10px; margin-bottom: 10px;">Current Netmask: Loading...</p>
+                <div class="sys-row">
+                    <input type="text" id="static-ip" class="sys-input" placeholder="IP (192.168.1.50)">
+                    <input type="text" id="static-mask" class="sys-input" placeholder="Mask (e.g. 24)" style="flex: none; width: 100px;">
+                </div>
+                <div class="sys-row">
+                    <input type="text" id="static-gw" class="sys-input" placeholder="Gateway (192.168.1.1)">
+                </div>
+                <div class="sys-row">
+                    <button onclick="setStaticIP()" class="sys-btn" style="flex:1;">APPLY STATIC</button>
+                    <button onclick="setAutoIP()" class="sys-btn sys-btn-warn" style="flex:1;">REVERT TO DHCP</button>
+                </div>
+            </div>
+
+            <div class="sys-group">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 style="margin: 0;">Access Point (Fallback)</h3>
+                    <span id="ap-status-badge" class="msg-status-badge status-off" style="float: none; position: static;">CHECKING...</span>
+                </div>
+                <div class="sys-row">
+                    <button onclick="toggleAP('on')" class="sys-btn" style="flex:1; background: var(--green);">TURN ON AP</button>
+                    <button onclick="toggleAP('down')" class="sys-btn sys-btn-danger" style="flex:1;">TURN OFF AP</button>
+                </div>
+            </div>
+
+            <div class="sys-group">
+                <h3>System Management</h3>
+                <div class="sys-row">
+                    <input type="text" id="sys-hostname" class="sys-input" placeholder="New Hostname">
+                    <button onclick="setHostname()" class="sys-btn">SET</button>
+                </div>
+                <div class="sys-row" style="margin-top: 15px;">
+                    <button onclick="updateFirmware()" class="sys-btn sys-btn-warn" style="flex: 1;">PULL FIRMWARE UPDATE (GIT)</button>
+                </div>
+            </div>
+
+            <div class="sys-group">
+                <h3>Admin Token (for protected v2 API routes)</h3>
+                <div class="sys-row">
+                    <input type="password" id="admin-token" class="sys-input" placeholder="x-stage-timer-token">
+                    <button onclick="saveAdminToken()" class="sys-btn">SAVE</button>
+                </div>
+                <p style="font-size:11px; color:var(--text-dim); margin:0;">Stored only in this browser (localStorage).</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="restart-modal" class="modal-overlay">
+        <div class="modal-content" style="width: 400px; text-align: center;">
+            <h3 style="color: var(--red); margin-top:0;">SYSTEM RESTART</h3>
+            <p style="color: var(--text-dim); margin-bottom: 25px;">Are you sure you want to restart the CuePi service?</p>
+            <div class="btn-grid">
+                <button onclick="document.getElementById('restart-modal').classList.remove('active')" class="btn btn-dim" style="padding: 15px;">CANCEL</button>
+                <button onclick="confirmRestart()" class="btn btn-toggle-on" style="padding: 15px; flex-direction: row;">RESTART</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="target-modal" class="modal-overlay">
+        <div class="modal-content" style="width: 420px;">
+            <div class="modal-title">
+                COUNT TO DATE/TIME
+                <button onclick="closeTargetModal()" style="background:none; border:none; color:white; font-size:20px; cursor:pointer;">×</button>
+            </div>
+            <div class="sys-group">
+                <h3>Target Date & Time</h3>
+                <div class="sys-row">
+                    <input type="datetime-local" id="target-datetime" class="sys-input">
+                    <button onclick="setTargetMode()" class="sys-btn">SET</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="import-preview-modal" class="modal-overlay">
+        <div class="modal-content" style="width: min(920px, 96vw);">
+            <div class="modal-title">
+                CSV IMPORT PREVIEW
+                <button onclick="closeImportPreviewModal()" style="background:none; border:none; color:white; font-size:20px; cursor:pointer;">×</button>
+            </div>
+            <div style="display:flex; gap:16px; margin-bottom: 12px; flex-wrap: wrap;">
+                <label><input type="radio" name="import-mode" value="replace" checked> Replace rundown</label>
+                <label><input type="radio" name="import-mode" value="append"> Append to existing</label>
+            </div>
+            <div id="import-warning-box" class="hidden" style="margin-bottom:12px; padding:10px; border-radius:10px; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.5); color:#fde68a;"></div>
+            <div style="max-height: 300px; overflow:auto; border:1px solid #334155; border-radius:10px;">
+                <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                    <thead><tr style="background:#0b1220;"><th style="text-align:left; padding:8px;">Name</th><th style="text-align:left; padding:8px;">Duration(s)</th><th style="text-align:left; padding:8px;">Mode</th><th style="text-align:left; padding:8px;">Notes</th></tr></thead>
+                    <tbody id="import-preview-rows"></tbody>
+                </table>
+            </div>
+            <div class="custom-time-row" style="margin-top: 12px;">
+                <button onclick="closeImportPreviewModal()" class="btn-set" style="background:#334155;">Cancel</button>
+                <button onclick="confirmRundownCsvImport()" class="btn-set">Import</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <div style="font-weight: 900; font-size: 24px;">CuePi <span style="font-size: 12px; opacity: 0.5; font-weight: normal;">Moderator</span></div>
+            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div class="ip-badge" id="ip-display">Connecting...</div>
+                <button id="btn-audio" onclick="toggleAudio()" class="btn-header-danger" style="color:var(--text-dim); border-color:var(--border);">🔕 AUDIO OFF</button>
+                <button onclick="openSettings()" class="btn-header-danger" style="background:var(--card); color:white; border-color:var(--border);">⚙️ SETTINGS</button>
+                <button onclick="document.getElementById('restart-modal').classList.add('active')" class="btn-header-danger" style="color:var(--red);">RESTART</button>
+            </div>
+        </header>
+        <div class="grid">
+            <div class="side-left">
+                <section class="card" style="margin-bottom: 20px;">
+                    <h2>Live Monitor</h2>
+                    <div id="m-frame" class="monitor">
+                        <img id="m-logo-img" src="" class="hidden" style="position: absolute; max-width: 80%; max-height: 80%; object-fit: contain; opacity: 0.8; z-index: 1;">
+                        <div id="m-time" class="monitor-time">10:00</div>
+                    </div>
+                    <div class="msg-preview">
+                        <span id="msg-badge" class="msg-status-badge status-off">OFF AIR</span>
+                        <div style="font-size: 10px; color: var(--text-dim); margin-bottom: 5px;">MESSAGE PREVIEW</div>
+                        <div id="msg-preview-text" style="font-weight: 700; font-style: italic;">No message set</div>
+                    </div>
+                </section>
+                
+                <section class="card" style="margin-bottom: 20px;">
+                    <h2>Display Mode</h2>
+                    <div class="preset-grid cols-4" style="margin-bottom: 0;">
+                        <button onclick="api('mode', '?set=countdown')" class="btn-preset" id="mode-countdown">Countdown</button>
+                        <button onclick="api('mode', '?set=countup')" class="btn-preset" id="mode-countup">Count-Up</button>
+                        <button onclick="api('mode', '?set=timeofday')" class="btn-preset" id="mode-timeofday">Time of Day</button>
+                        <button onclick="api('mode', '?set=logo')" class="btn-preset" id="mode-logo">Idle / Logo</button>
+                    </div>
+                    <div class="custom-time-row" style="margin-top: 10px;">
+                        <button onclick="triggerTargetCountdown()" class="btn-preset" style="flex:1; background: rgba(37,99,235,0.15); border:1px solid rgba(37,99,235,0.4);">Count to date/time</button>
+                        <button id="target-display-btn" onclick="openTargetModal()" class="btn-preset" style="flex:1;">Select Date/Time</button>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <h2>Quick Presets & Custom Time</h2>
+                    <div class="preset-grid">
+                        <button onclick="api('reset',60)" class="btn-preset">1m</button>
+                        <button onclick="api('reset',300)" class="btn-preset">5m</button>
+                        <button onclick="api('reset',600)" class="btn-preset" style="color: #60a5fa; border: 1px solid rgba(37, 99, 235, 0.3);">10m</button>
+                        <button onclick="api('reset',900)" class="btn-preset">15m</button>
+                        <button onclick="api('reset',1800)" class="btn-preset">30m</button>
+                        <button onclick="api('reset',3600)" class="btn-preset">60m</button>
+                    </div>
+                    <div class="custom-time-row">
+                        <input type="number" id="custom-min" placeholder="Set Minutes..." class="input-compact">
+                        <button onclick="setCustomTime()" class="btn-set">SET TIME</button>
+                    </div>
+                </section>
+
+                <section class="card" style="margin-top: 20px;">
+                    <h2>Rundown (Phase 3)</h2>
+                    <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px; flex-wrap:wrap;">
+                        <div id="rundown-next-hint" class="hidden" style="flex:1; min-width:300px; background:rgba(37,99,235,0.2); border:1px solid rgba(96,165,250,0.5); color:#dbeafe; padding:10px 14px; border-radius:10px; font-weight:700;"></div>
+                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-dim);">
+                            <input id="hint-pin-toggle" type="checkbox" checked>
+                            📌 Push note to presenter
+                        </label>
+                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-dim);">
+                            Trigger (sec)
+                            <input id="hint-threshold-seconds" type="number" min="1" step="1" class="sys-input" style="height:32px; width:88px;" value="60">
+                            <button onclick="saveHintThreshold()" class="sys-btn" style="height:32px; padding:0 10px;">Save</button>
+                        </label>
+                        <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-dim);">
+                            <span>At 0s:</span>
+                            <div class="mode-toggle" id="rundown-flow-toggle">
+                                <button id="rundown-flow-follow" onclick="setRundownFlowMode('follow')">Follow</button>
+                                <button id="rundown-flow-overflow" onclick="setRundownFlowMode('overflow')">Overflow</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="custom-time-row" style="margin-bottom: 10px;">
+                        <input type="text" id="r-name" placeholder="Segment name" class="input-compact">
+                        <input type="number" id="r-minutes" placeholder="Min" class="input-compact" style="max-width: 90px;">
+                        <input type="number" id="r-seconds" placeholder="Sec" class="input-compact" style="max-width: 90px;">
+                    </div>
+                    <div class="custom-time-row" style="margin-bottom: 10px;">
+                        <select id="r-mode" class="input-compact">
+                            <option value="countdown">Countdown</option>
+                            <option value="countup">Count-Up</option>
+                            <option value="timeofday">Time of Day</option>
+                            <option value="logo">Logo</option>
+                        </select>
+                        <button id="r-save-btn" onclick="saveRundownSegment()" class="btn-set">ADD</button>
+                    </div>
+                    <input type="text" id="r-notes" placeholder="Optional notes" class="msg-input" style="margin-bottom: 12px;">
+                    <div class="custom-time-row" style="margin-bottom: 12px; gap: 10px;">
+                        <button onclick="rundownRunCurrent()" class="btn-set" title="Run current segment" style="height:42px; width:42px; border-radius:999px; padding:0; background: var(--green);">▶</button>
+                        <button onclick="api('pause')" class="btn-set" title="Stop" style="height:42px; width:42px; border-radius:999px; padding:0; background: var(--amber);">■</button>
+                        <button onclick="rundownPrev()" class="btn-set" title="Previous segment" style="height:42px; width:42px; border-radius:999px; padding:0;">⏮</button>
+                        <button onclick="rundownNext()" class="btn-set" title="Next segment" style="height:42px; width:42px; border-radius:999px; padding:0; background: var(--green);">⏭</button>
+                        <input type="file" id="rundown-csv-input" accept=".csv,text/csv" class="hidden" onchange="importRundownCsv(this)">
+                        <button onclick="downloadRundownTemplateCsv()" class="btn-set" title="Download rundown template CSV" style="height:42px; width:42px; border-radius:999px; padding:0; background: #0f766e;">T</button>
+                        <button onclick="document.getElementById('rundown-csv-input').click()" class="btn-set" title="Import rundown CSV" style="height:42px; width:42px; border-radius:999px; padding:0; background: #1f2937;">⬆</button>
+                        <button onclick="exportActuals()" class="btn-set" title="Export CSV actuals" style="height:42px; width:42px; border-radius:999px; padding:0; background: #334155;">⬇</button>
+                    </div>
+                    <div id="rundown-list" style="display: grid; gap: 8px;"></div>
+                </section>
+            </div>
+
+            <div class="side-right">
+                <section class="card" style="margin-bottom: 20px;">
+                    <h2>Transport Controls</h2>
+                    <div class="btn-grid">
+                        <div id="transport-toggle">
+                            <button id="b-start" onclick="api('start')" class="btn btn-start" style="width: 100%;">
+                                <div class="icon-circle">
+                                    <svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+                                </div>
+                                <span style="font-size: 1.25rem; letter-spacing: 0.1em;">START</span>
+                            </button>
+                            <button id="b-pause" onclick="api('pause')" class="btn btn-pause hidden" style="width: 100%;">
+                                <div class="icon-circle">
+                                    <svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+                                </div>
+                                <span style="font-size: 1.25rem; letter-spacing: 0.1em;">PAUSE</span>
+                            </button>
+                        </div>
+
+                        <button onclick="api('reset')" class="btn btn-reset">
+                            <div class="icon-circle" style="background: rgba(255,255,255,0.1);">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                            </div>
+                            <span style="font-size: 1.25rem; letter-spacing: 0.1em;">RESET</span>
+                        </button>
+
+                        <button onclick="api('add',60)" class="btn btn-blue" style="height: 80px; flex-direction: row; gap: 8px;">
+                            <span style="font-size: 20px;">+</span> 1 MIN
+                        </button>
+                        <button onclick="api('add',-60)" class="btn btn-dim" style="height: 80px; flex-direction: row; gap: 8px;">
+                            <span style="font-size: 20px;">-</span> 1 MIN
+                        </button>
+                    </div>
+                </section>
+
+                <section class="card" style="margin-bottom: 20px;">
+                    <h2>Messaging Control</h2>
+                    <input type="text" id="minput" placeholder="Enter custom message..." class="msg-input" oninput="updateMsgText()">
+                    <button id="btn-toggle" onclick="api('message/toggle')" class="btn btn-toggle btn-toggle-off" style="margin-bottom: 20px;">SHOW MESSAGE</button>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; margin-top: 10px;">
+                        <h2 style="margin: 0;">Quick Message Bank (Instant Live)</h2>
+                        <button onclick="addQuickMessage()" class="btn-blue" style="padding: 6px 12px; border-radius: 6px; font-size: 10px; font-weight: 900; letter-spacing: 1px;">+ SAVE</button>
+                    </div>
+                    
+                    <div class="preset-grid cols-2" style="margin-bottom: 0;" id="quick-messages-grid"></div>
+                </section>
+
+                <section class="card">
+                    <h2>Event Logo Upload</h2>
+                    <div class="logo-preview-box" id="logo-preview-container">
+                        <span class="logo-empty-text" id="logo-empty-hint">No Logo Uploaded</span>
+                        <img id="logo-preview-img" src="" class="hidden">
+                    </div>
+                    <div class="custom-time-row">
+                        <input type="file" id="logo-input" accept="image/*" class="hidden" onchange="handleLogoSelection(this)">
+                        <button onclick="document.getElementById('logo-input').click()" class="btn-set" style="flex:1; padding: 15px;">UPLOAD LOGO</button>
+                        <button onclick="clearLogo()" class="btn-set" style="background: var(--red); flex:none; padding: 0 20px;">🗑️</button>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <script>
+            const socket = io();
+            let adminToken = localStorage.getItem('stageTimerAdminToken') || '';
+            let editingRundownIndex = null;
+            let rundownCache = [];
+            let lastRundownHintSegment = '';
+            let activeRundownHintStep = null;
+            let autoRundownMessageStep = null;
+            let autoRundownMessageText = '';
+            let hintThresholdSeconds = Number(localStorage.getItem('rundownHintThresholdSec') || 60);
+            let pendingRundownImportCsv = '';
+            let pendingRundownImportSegments = [];
+            let pendingRundownImportWarnings = [];
+            let autoContinueInFlight = false;
+            let rundownFlowMode = localStorage.getItem('rundownFlowMode') || 'overflow';
+            let v2OnlyMode = false;
+            let selectedTargetISO = null;
+
+        // Audio Cues Logic
+        let audioEnabled = false;
+        let lastTimeLeft = -999;
+
+        function getHintThreshold() {
+            return Number.isFinite(hintThresholdSeconds) && hintThresholdSeconds > 0 ? Math.floor(hintThresholdSeconds) : 60;
+        }
+
+        function saveHintThreshold() {
+            const seconds = Number(document.getElementById('hint-threshold-seconds').value);
+            if (!Number.isFinite(seconds) || seconds < 1) return alert('Threshold must be at least 1 second');
+            hintThresholdSeconds = Math.floor(seconds);
+            localStorage.setItem('rundownHintThresholdSec', String(hintThresholdSeconds));
+            alert(`Saved rundown trigger threshold at ${hintThresholdSeconds}s`);
+        }
+
+        function setRundownFlowMode(mode) {
+            rundownFlowMode = mode === 'follow' ? 'follow' : 'overflow';
+            localStorage.setItem('rundownFlowMode', rundownFlowMode);
+            document.getElementById('rundown-flow-follow').classList.toggle('active', rundownFlowMode === 'follow');
+            document.getElementById('rundown-flow-overflow').classList.toggle('active', rundownFlowMode === 'overflow');
+        }
+        
+        function toggleAudio() {
+            audioEnabled = !audioEnabled;
+            const btn = document.getElementById('btn-audio');
+            if (audioEnabled) {
+                btn.innerText = "🔔 AUDIO ON";
+                btn.style.color = "var(--green)";
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                ctx.resume(); // Safari requires user interaction to unlock audio
+            } else {
+                btn.innerText = "🔕 AUDIO OFF";
+                btn.style.color = "var(--text-dim)";
+            }
+        }
+
+        function playChime() {
+            if (!audioEnabled) return;
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.5);
+                gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 1);
+            } catch(e) { console.error("Audio block", e); }
+        }
+
+        function getApiHeaders(includeJson = true) {
+            const headers = includeJson ? { 'Content-Type': 'application/json' } : {};
+            if (adminToken) headers['x-stage-timer-token'] = adminToken;
+            return headers;
+        }
+
+        async function apiPost(path, body = {}, allowLegacyGetFallback = true) {
+            const res = await fetch(path, { method: 'POST', headers: getApiHeaders(true), body: JSON.stringify(body) });
+            if (!res.ok) {
+                if (!v2OnlyMode && allowLegacyGetFallback && [404, 405].includes(res.status)) {
+                    return null;
+                }
+                const text = await res.text();
+                throw new Error(text || `${res.status}`);
+            }
+            return res;
+        }
+
+        async function api(c, v = "") {
+            const payload = {};
+            if (v !== "") {
+                const vStr = String(v);
+                if (vStr.startsWith('?set=')) payload.set = vStr.replace('?set=', '');
+                else payload.sec = Number(vStr);
+            }
+            try {
+                const postRes = await apiPost(`/api/${c}`, payload);
+                if (postRes) return;
+            } catch (error) {
+                console.error(error);
+            }
+
+            let param = '';
+            if (v !== '') {
+                const vStr = String(v);
+                param = vStr.startsWith('?') ? vStr : (`?sec=${vStr}`);
+            }
+            if (!v2OnlyMode) await fetch(`/api/${c}${param}`, { headers: getApiHeaders(false) });
+        }
+
+        async function updateMsgText() {
+            const text = document.getElementById('minput').value;
+            try {
+                const postRes = await apiPost('/api/message/set', { text });
+                if (postRes) return;
+            } catch (error) {
+                console.error(error);
+            }
+            if (!v2OnlyMode) fetch(`/api/message/set?text=${encodeURIComponent(text)}`, { headers: getApiHeaders(false) });
+        }
+        function setCustomTime() { const mins = document.getElementById('custom-min').value; if (mins) api('reset', parseInt(mins) * 60); }
+        async function addQuickMessage() {
+            const text = document.getElementById('minput').value.trim();
+            if (!text) return;
+            try {
+                const postRes = await apiPost('/api/messages/add', { text });
+                if (!v2OnlyMode && !postRes) await fetch(`/api/messages/add?text=${encodeURIComponent(text)}`, { headers: getApiHeaders(false) });
+                document.getElementById('minput').value = '';
+            } catch (error) {
+                alert(`Save failed: ${error.message}`);
+            }
+        }
+
+        function openSettings() { document.getElementById('settings-modal').classList.add('active'); checkAPStatus(); }
+        function closeSettings() { document.getElementById('settings-modal').classList.remove('active'); }
+        async function confirmRestart() {
+            try {
+                await apiPost('/api/system/restart', {});
+            } catch (error) {
+                alert(`Restart failed: ${error.message}`);
+                return;
+            }
+            document.getElementById('restart-modal').classList.remove('active');
+            setTimeout(() => { window.location.reload(); }, 4000);
+        }
+        
+        async function scanWifi() {
+            document.getElementById('wifi-status').innerText = "Scanning...";
+            let res = await fetch('/api/system/wifi/scan', { method: 'POST', headers: getApiHeaders(true), body: JSON.stringify({}) });
+            if (!v2OnlyMode && !res.ok) res = await fetch('/api/system/wifi/scan', { headers: getApiHeaders(false) });
+            const networks = await res.json();
+            const select = document.getElementById('wifi-ssid');
+            select.innerHTML = '<option value="">Select a Network...</option>';
+            networks.forEach(n => {
+                const opt = document.createElement('option');
+                opt.value = n.ssid; opt.innerText = `${n.ssid} (${n.signal}%)`;
+                select.appendChild(opt);
+            });
+            document.getElementById('wifi-select-row').classList.remove('hidden');
+            document.getElementById('wifi-status').innerText = "";
+        }
+
+        function toggleWifiPass() {
+            const ssid = document.getElementById('wifi-ssid').value;
+            if (ssid) document.getElementById('wifi-pass-row').classList.remove('hidden');
+            else document.getElementById('wifi-pass-row').classList.add('hidden');
+        }
+
+        async function connectWifi() {
+            const ssid = document.getElementById('wifi-ssid').value;
+            const pass = document.getElementById('wifi-pass').value;
+            if(!ssid) return;
+            document.getElementById('wifi-status').innerText = "Connecting...";
+            try {
+                let res = await fetch('/api/system/wifi/connect', {
+                    method: 'POST',
+                    headers: getApiHeaders(true),
+                    body: JSON.stringify({ ssid, password: pass })
+                });
+                if (!v2OnlyMode && !res.ok) {
+                    res = await fetch(`/api/system/wifi/connect?ssid=${encodeURIComponent(ssid)}&password=${encodeURIComponent(pass)}`, { headers: getApiHeaders(false) });
+                }
+                const text = await res.text();
+                document.getElementById('wifi-status').innerText = text;
+            } catch (error) {
+                document.getElementById('wifi-status').innerText = `Connection failed: ${error.message}`;
+            }
+        }
+
+        function setStaticIP() {
+            const ssid = document.getElementById('wifi-ssid').value;
+            const ip = document.getElementById('static-ip').value;
+            const mask = document.getElementById('static-mask').value;
+            const gw = document.getElementById('static-gw').value;
+            if(!ssid || !ip || !mask || !gw) { alert('Select a network and fill all fields (IP, Mask, Gateway)'); return; }
+            const cidr = ip.includes('/') ? ip : `${ip}/${mask}`;
+            fetch('/api/system/wifi/static', { method: 'POST', headers: getApiHeaders(true), body: JSON.stringify({ ssid, ip: cidr, gateway: gw }) });
+            alert('Static IP Applied to connection.');
+        }
+
+        function setAutoIP() {
+            const ssid = document.getElementById('wifi-ssid').value;
+            if(!ssid) return;
+            fetch('/api/system/wifi/static', { method: 'POST', headers: getApiHeaders(true), body: JSON.stringify({ ssid, ip: 'auto' }) });
+        }
+
+        async function checkAPStatus() {
+            try {
+                const res = await fetch('/api/system/ap/status', { headers: getApiHeaders(false) });
+                const data = await res.json();
+                const badge = document.getElementById('ap-status-badge');
+                if(data.active) { badge.innerText = "ACTIVE"; badge.className = "msg-status-badge status-live"; } 
+                else { badge.innerText = "INACTIVE"; badge.className = "msg-status-badge status-off"; }
+            } catch(e) {}
+        }
+
+        async function toggleAP(action) {
+            const normalized = action === 'down' ? 'off' : action;
+            await fetch('/api/system/ap', { method: 'POST', headers: getApiHeaders(true), body: JSON.stringify({ action: normalized }) });
+            setTimeout(checkAPStatus, 2000);
+        }
+        function setHostname() {
+            const name = document.getElementById('sys-hostname').value;
+            if (name) fetch('/api/system/hostname', { method: 'POST', headers: getApiHeaders(true), body: JSON.stringify({ name }) });
+        }
+        function updateFirmware() {
+            if (confirm('Pull updates and restart?')) fetch('/api/system/update', { method: 'POST', headers: getApiHeaders(true), body: JSON.stringify({}) });
+        }
+
+        function saveAdminToken() {
+            adminToken = document.getElementById('admin-token').value.trim();
+            localStorage.setItem('stageTimerAdminToken', adminToken);
+            alert('Admin token saved locally in this browser.');
+        }
+
+        function openTargetModal() { document.getElementById('target-modal').classList.add('active'); }
+        function closeTargetModal() { document.getElementById('target-modal').classList.remove('active'); }
+
+        function formatCountdownSignedDDHHMMSS(timeLeftSeconds) {
+            const sign = timeLeftSeconds > 0 ? '-' : '+';
+            const abs = Math.abs(timeLeftSeconds);
+            const days = Math.floor(abs / 86400);
+            const hours = Math.floor((abs % 86400) / 3600);
+            const mins = Math.floor((abs % 3600) / 60);
+            const secs = abs % 60;
+            return `${sign}${days.toString().padStart(2, '0')} ${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        async function setTargetMode() {
+            const value = document.getElementById('target-datetime').value;
+            if (!value) return alert('Please select date and time');
+            selectedTargetISO = new Date(value).toISOString();
+            const displayBtn = document.getElementById('target-display-btn');
+            if (displayBtn) displayBtn.innerText = new Date(selectedTargetISO).toLocaleString();
+            closeTargetModal();
+        }
+
+        async function triggerTargetCountdown() {
+            if (!selectedTargetISO) return alert('Select date/time first');
+            try {
+                await apiPost('/api/mode', { set: 'target', targetISO: selectedTargetISO });
+            } catch (error) {
+                alert(`Failed to set target mode: ${error.message}`);
+            }
+        }
+
+        async function loadRundown() {
+            try {
+                const res = await fetch('/api/rundown');
+                const data = await res.json();
+                rundownCache = data.rundown || [];
+                const list = document.getElementById('rundown-list');
+                list.innerHTML = '';
+                rundownCache.forEach((segment, index) => {
+                    const row = document.createElement('div');
+                    row.draggable = true;
+                    row.dataset.index = index;
+                    row.style.cssText = `display:grid; grid-template-columns: 26px 1fr 1fr 1fr auto auto; gap:8px; align-items:center; background:${index===data.currentIndex?'rgba(37,99,235,0.2)':'#0f172a'}; border:1px solid #334155; border-radius:10px; padding:10px;`;
+                    const noteText = (segment.notes || '').trim();
+                    row.innerHTML = `
+                    <div title="Drag to reorder" style="cursor:grab; color:#93c5fd; font-size:16px; text-align:center; user-select:none;">⋮⋮</div>
+                    <div style="font-size:12px; min-width:0;">
+                        <div style="font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${index + 1}. ${segment.name}</div>
+                        <div style="font-size:10px; color:#64748b;">Segment name</div>
+                    </div>
+                    <div style="font-size:12px; min-width:0;">
+                        <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#93c5fd;">${segment.mode} • ${segment.duration}s</div>
+                        <div style="font-size:10px; color:#64748b;">Type & duration</div>
+                    </div>
+                    <div style="font-size:12px; min-width:0;">
+                        <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:${noteText ? '#cbd5e1' : '#64748b'}; font-style:${noteText ? 'italic' : 'normal'};">${noteText || 'No optional note'}</div>
+                        <div style="font-size:10px; color:#64748b;">Optional note</div>
+                    </div>`;
+                    row.ondragstart = (e) => e.dataTransfer.setData('text/plain', String(index));
+                    row.ondragover = (e) => e.preventDefault();
+                    row.ondrop = async (e) => {
+                        e.preventDefault();
+                        const from = parseInt(e.dataTransfer.getData('text/plain'), 10);
+                        const to = parseInt(row.dataset.index, 10);
+                        if (Number.isNaN(from) || Number.isNaN(to) || from === to) return;
+                        const reordered = [...rundownCache];
+                        const [moved] = reordered.splice(from, 1);
+                        reordered.splice(to, 0, moved);
+                        try {
+                            await apiPost('/api/rundown/set', { rundown: reordered });
+                            await loadRundown();
+                        } catch (error) {
+                            alert(`Reorder failed: ${error.message}`);
+                        }
+                    };
+
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'btn-set';
+                    editBtn.style.cssText = 'height:34px; width:34px; border-radius:999px; padding:0; display:flex; align-items:center; justify-content:center;';
+                    editBtn.innerText = '✎';
+                    editBtn.title = 'Edit segment';
+                    editBtn.onclick = () => {
+                        editingRundownIndex = index;
+                        document.getElementById('r-name').value = segment.name || '';
+                        document.getElementById('r-minutes').value = Math.floor((segment.duration || 0) / 60);
+                        document.getElementById('r-seconds').value = (segment.duration || 0) % 60;
+                        document.getElementById('r-mode').value = segment.mode || 'countdown';
+                        document.getElementById('r-notes').value = segment.notes || '';
+                        document.getElementById('r-save-btn').innerText = 'UPDATE';
+                    };
+
+                    const delBtn = document.createElement('button');
+                    delBtn.className = 'btn-set';
+                    delBtn.style.cssText = 'height:34px; width:34px; border-radius:999px; padding:0; display:flex; align-items:center; justify-content:center; background: var(--red);';
+                    delBtn.innerText = '✕';
+                    delBtn.title = 'Delete segment';
+                    delBtn.onclick = async () => {
+                        try {
+                            await apiPost('/api/rundown/item/remove', { index });
+                            await loadRundown();
+                        } catch (error) {
+                            alert(`Remove failed: ${error.message}`);
+                        }
+                    };
+
+                    row.appendChild(editBtn);
+                    row.appendChild(delBtn);
+                    list.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Rundown load failed', error);
+            }
+        }
+
+        async function saveRundownSegment() {
+            const mins = parseInt(document.getElementById('r-minutes').value || '0', 10);
+            const secs = parseInt(document.getElementById('r-seconds').value || '0', 10);
+            const segment = {
+                name: document.getElementById('r-name').value.trim(),
+                duration: Math.max(0, (isNaN(mins) ? 0 : mins) * 60 + (isNaN(secs) ? 0 : secs)),
+                mode: document.getElementById('r-mode').value,
+                notes: document.getElementById('r-notes').value.trim(),
+            };
+
+            try {
+                if (editingRundownIndex === null) {
+                    await apiPost('/api/rundown/item/add', { segment });
+                } else {
+                    await apiPost('/api/rundown/item/update', { index: editingRundownIndex, segment });
+                }
+                editingRundownIndex = null;
+                document.getElementById('r-save-btn').innerText = 'ADD';
+                document.getElementById('r-name').value = '';
+                document.getElementById('r-minutes').value = '';
+                document.getElementById('r-seconds').value = '';
+                document.getElementById('r-mode').value = 'countdown';
+                document.getElementById('r-notes').value = '';
+                await loadRundown();
+            } catch (error) {
+                alert(`Save failed: ${error.message}`);
+            }
+        }
+
+        async function rundownNext() {
+            try {
+                await apiPost('/api/rundown/next');
+                await loadRundown();
+            } catch (error) {
+                alert(`Next failed: ${error.message}`);
+            }
+        }
+
+        async function rundownPrev() {
+            try {
+                await apiPost('/api/rundown/previous');
+                await loadRundown();
+            } catch (error) {
+                alert(`Previous failed: ${error.message}`);
+            }
+        }
+
+        async function rundownRunCurrent() {
+            try {
+                await apiPost('/api/rundown/run-current');
+                await loadRundown();
+            } catch (error) {
+                alert(`Run failed: ${error.message}`);
+            }
+        }
+
+        async function exportActuals() {
+            try {
+                const res = await fetch('/api/rundown/actuals/export', { headers: getApiHeaders(false) });
+                if (!res.ok) {
+                    const text = await res.text();
+                    throw new Error(text || `${res.status}`);
+                }
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'actuals.csv';
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                alert(`Export failed: ${error.message}`);
+            }
+        }
+
+        function parseCsvRows(text) {
+            const rows = [];
+            let row = [];
+            let cell = '';
+            let inQuotes = false;
+
+            for (let i = 0; i < text.length; i++) {
+                const ch = text[i];
+                const next = text[i + 1];
+                if (ch === '"') {
+                    if (inQuotes && next === '"') { cell += '"'; i++; }
+                    else inQuotes = !inQuotes;
+                } else if (ch === ',' && !inQuotes) {
+                    row.push(cell);
+                    cell = '';
+                } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
+                    if (ch === '\r' && next === '\n') i++;
+                    row.push(cell);
+                    if (row.some(part => String(part).trim() !== '')) rows.push(row);
+                    row = [];
+                    cell = '';
+                } else {
+                    cell += ch;
+                }
+            }
+            if (cell.length || row.length) {
+                row.push(cell);
+                if (row.some(part => String(part).trim() !== '')) rows.push(row);
+            }
+            return rows;
+        }
+
+        function parseDurationToSeconds(raw) {
+            const value = String(raw || '').trim();
+            if (!value) return 0;
+            if (/^\d+$/.test(value)) return Math.max(0, parseInt(value, 10));
+            const parts = value.split(':').map(p => p.trim()).filter(Boolean).map(Number);
+            if (parts.some(n => !Number.isFinite(n))) return 0;
+            if (parts.length === 2) return Math.max(0, parts[0] * 60 + parts[1]);
+            if (parts.length === 3) return Math.max(0, parts[0] * 3600 + parts[1] * 60 + parts[2]);
+            return 0;
+        }
+
+        function mapRundownRowsFromCsv(csvText) {
+            const rows = parseCsvRows(csvText);
+            if (!rows.length) return { segments: [], warnings: ['CSV is empty'] };
+
+            const first = rows[0].map(v => String(v || '').trim().toLowerCase());
+            const hasHeader = first.includes('name') || first.includes('segment') || first.includes('duration') || first.includes('mode') || first.includes('notes');
+            const dataRows = hasHeader ? rows.slice(1) : rows;
+            const warnings = [];
+
+            const indexOf = (keys, fallback) => {
+                for (const key of keys) {
+                    const idx = first.indexOf(key);
+                    if (idx >= 0) return idx;
+                }
+                return fallback;
+            };
+
+            const nameIdx = hasHeader ? indexOf(['name', 'segment', 'title'], 0) : 0;
+            const durationIdx = hasHeader ? indexOf(['duration', 'seconds', 'duration_seconds', 'time'], 1) : 1;
+            const modeIdx = hasHeader ? indexOf(['mode', 'type'], 2) : 2;
+            const notesIdx = hasHeader ? indexOf(['notes', 'note', 'optional_note'], 3) : 3;
+
+            const allowedModes = new Set(['countdown', 'countup', 'timeofday', 'logo']);
+            const segments = dataRows.map((cols, idx) => {
+                const rowNum = hasHeader ? idx + 2 : idx + 1;
+                const modeRaw = String(cols[modeIdx] || '').trim().toLowerCase();
+                if (modeRaw && !allowedModes.has(modeRaw)) warnings.push(`Row ${rowNum}: unknown mode "${modeRaw}", defaulted to countdown`);
+                return {
+                    name: String(cols[nameIdx] || '').trim() || 'Untitled Segment',
+                    duration: parseDurationToSeconds(cols[durationIdx]),
+                    mode: allowedModes.has(modeRaw) ? modeRaw : 'countdown',
+                    notes: String(cols[notesIdx] || '').trim(),
+                };
+            });
+            return { segments, warnings };
+        }
+
+        function openImportPreviewModal() {
+            document.getElementById('import-preview-modal').classList.add('active');
+        }
+
+        function closeImportPreviewModal() {
+            document.getElementById('import-preview-modal').classList.remove('active');
+        }
+
+        function downloadRundownTemplateCsv() {
+            const template = [
+                'name,duration,mode,notes',
+                'Opening,300,countdown,Welcome and housekeeping',
+                'Speaker A,900,countdown,Keep answers short in Q&A',
+                'Break,600,countdown,',
+                'Clock Check,0,timeofday,'
+            ].join('\n');
+            const blob = new Blob([template], { type: 'text/csv;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'rundown_template.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        async function importRundownCsv(input) {
+            const file = input.files && input.files[0];
+            if (!file) return;
+            try {
+                const text = await file.text();
+                const mapped = mapRundownRowsFromCsv(text);
+                if (!mapped.segments.length) return alert('No valid segments found in CSV.');
+                pendingRundownImportCsv = text;
+                pendingRundownImportSegments = mapped.segments;
+                pendingRundownImportWarnings = mapped.warnings;
+
+                const rowsEl = document.getElementById('import-preview-rows');
+                rowsEl.innerHTML = '';
+                pendingRundownImportSegments.forEach(seg => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td style="padding:8px; border-top:1px solid #334155;">${seg.name}</td>
+                                    <td style="padding:8px; border-top:1px solid #334155;">${seg.duration}</td>
+                                    <td style="padding:8px; border-top:1px solid #334155;">${seg.mode}</td>
+                                    <td style="padding:8px; border-top:1px solid #334155;">${seg.notes || ''}</td>`;
+                    rowsEl.appendChild(tr);
+                });
+                const warnEl = document.getElementById('import-warning-box');
+                if (pendingRundownImportWarnings.length) {
+                    warnEl.classList.remove('hidden');
+                    warnEl.innerHTML = `<strong>Validation warnings:</strong><br>${pendingRundownImportWarnings.join('<br>')}`;
+                } else {
+                    warnEl.classList.add('hidden');
+                    warnEl.innerHTML = '';
+                }
+                openImportPreviewModal();
+            } catch (error) {
+                alert(`CSV import failed: ${error.message}`);
+            } finally {
+                input.value = '';
+            }
+        }
+
+        async function confirmRundownCsvImport() {
+            if (!pendingRundownImportCsv) return alert('No CSV pending import.');
+            const importModeEl = document.querySelector('input[name="import-mode"]:checked');
+            const importMode = importModeEl ? importModeEl.value : 'replace';
+            try {
+                const res = await apiPost('/api/rundown/import', { csv: pendingRundownImportCsv, importMode });
+                const data = await res.json();
+                await loadRundown();
+                closeImportPreviewModal();
+                pendingRundownImportCsv = '';
+                pendingRundownImportSegments = [];
+                pendingRundownImportWarnings = [];
+                const warningMsg = data.warnings && data.warnings.length ? `\nWarnings:\n- ${data.warnings.join('\n- ')}` : '';
+                alert(`Imported ${data.imported || 0} segment(s) (${importMode}).${warningMsg}`);
+            } catch (error) {
+                alert(`Import failed: ${error.message}`);
+            }
+        }
+
+        function handleLogoSelection(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const imageData = e.target.result;
+                try {
+                    const res = await fetch('/api/system/logo/upload', {
+                        method: 'POST',
+                        headers: getApiHeaders(true),
+                        body: JSON.stringify({ image: imageData })
+                    });
+                    if (!res.ok) {
+                        const errText = await res.text();
+                        alert(`Logo upload failed: ${errText}`);
+                        return;
+                    }
+                    updateLogoUI(imageData);
+                } catch (error) {
+                    alert('Logo upload failed: network error');
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearLogo() {
+            if(confirm('Clear current logo?')) {
+                fetch('/api/system/logo/clear', { method: 'POST', headers: getApiHeaders(true), body: JSON.stringify({}) });
+                document.getElementById('logo-input').value = '';
+            }
+        }
+
+        function updateLogoUI(dataUrl) {
+            const hint = document.getElementById('logo-empty-hint');
+            const img = document.getElementById('logo-preview-img');
+            const monitorImg = document.getElementById('m-logo-img');
+            
+            if (dataUrl) {
+                hint.classList.add('hidden');
+                img.src = dataUrl; img.classList.remove('hidden');
+                monitorImg.src = dataUrl;
+            } else {
+                hint.classList.remove('hidden');
+                img.classList.add('hidden');
+                monitorImg.src = ''; monitorImg.classList.add('hidden');
+            }
+        }
+
+        socket.on('stateUpdate', async s => {
+            document.getElementById('ip-display').innerText = s.ip;
+            document.getElementById('current-ip-info').innerText = `Current Interface: ${s.ip} (Netmask: ${s.netmask || 'N/A'})`;
+            
+            const previousTimeLeft = lastTimeLeft;
+
+            // Audio trigger on exact cross of 0
+            if (s.mode === 'countdown' && s.isRunning && s.timeLeft === 0 && previousTimeLeft === 1) {
+                playChime();
+            }
+            v2OnlyMode = !!s.v2OnlyMode;
+
+            if (s.logoData) updateLogoUI(s.logoData); else updateLogoUI(null);
+
+            document.querySelectorAll('#mode-countdown, #mode-countup, #mode-timeofday, #mode-logo').forEach(btn => {
+                btn.style.border = '1px solid transparent'; btn.style.color = '#fff';
+            });
+            const activeBtn = document.getElementById('mode-' + s.mode);
+            if(activeBtn) { activeBtn.style.border = '1px solid #60a5fa'; activeBtn.style.color = '#60a5fa'; }
+            if (s.targetISO) {
+                selectedTargetISO = s.targetISO;
+                const displayBtn = document.getElementById('target-display-btn');
+                if (displayBtn) displayBtn.innerText = new Date(selectedTargetISO).toLocaleString();
+            }
+
+            if (activeRundownHintStep !== null && s.currentIndex !== activeRundownHintStep) {
+                const hint = document.getElementById('rundown-next-hint');
+                hint.classList.add('hidden');
+                hint.style.boxShadow = 'none';
+                hint.style.borderColor = 'rgba(96,165,250,0.5)';
+                activeRundownHintStep = null;
+
+                if (autoRundownMessageStep !== null && s.currentIndex !== autoRundownMessageStep) {
+                    if (s.messageSource === 'auto_rundown') {
+                        try {
+                            if (s.showMessage) await apiPost('/api/message/toggle', {});
+                            await apiPost('/api/message/set', { text: '', source: 'manual' });
+                        } catch (error) {
+                            console.warn('Could not clear auto rundown message:', error.message);
+                        }
+                    }
+                    autoRundownMessageStep = null;
+                    autoRundownMessageText = '';
+                }
+            }
+
+            const threshold = getHintThreshold();
+            const hitThreshold = s.mode === 'countdown' && s.isRunning && previousTimeLeft > threshold && s.timeLeft <= threshold;
+            if (hitThreshold && s.currentSegment && rundownCache[s.currentIndex + 1]) {
+                const nextSegment = rundownCache[s.currentIndex + 1];
+                const nextName = nextSegment.name || 'Next Segment';
+                const nextNote = String(nextSegment.notes || '').trim();
+                if (lastRundownHintSegment !== `${s.currentIndex}:${nextName}`) {
+                    const hint = document.getElementById('rundown-next-hint');
+                    hint.innerText = nextNote ? `⚡ NEXT UP: ${nextName} — Note: ${nextNote}` : `⚡ NEXT UP: ${nextName}`;
+                    hint.classList.remove('hidden');
+                    hint.style.boxShadow = '0 0 0 2px rgba(56,189,248,0.35), 0 0 22px rgba(56,189,248,0.25)';
+                    hint.style.borderColor = 'rgba(125,211,252,0.9)';
+                    activeRundownHintStep = s.currentIndex;
+                    lastRundownHintSegment = `${s.currentIndex}:${nextName}`;
+
+                    const nextMessage = nextNote;
+                    autoRundownMessageText = nextMessage;
+                    autoRundownMessageStep = s.currentIndex;
+                    if (document.getElementById('hint-pin-toggle').checked && nextMessage) {
+                        try {
+                            await apiPost('/api/message/set', { text: nextMessage, source: 'auto_rundown' });
+                            if (!s.showMessage) await apiPost('/api/message/toggle', {});
+                        } catch (error) {
+                            console.warn('Could not push auto rundown message:', error.message);
+                        }
+                    }
+                }
+            }
+
+            const autoContinueEnabled = rundownFlowMode === 'follow';
+            const crossedZero = s.mode === 'countdown' && s.isRunning && previousTimeLeft > 0 && s.timeLeft <= 0;
+            if (autoContinueEnabled && crossedZero && rundownCache[s.currentIndex + 1] && !autoContinueInFlight) {
+                autoContinueInFlight = true;
+                try {
+                    await apiPost('/api/rundown/next');
+                    await loadRundown();
+                } catch (error) {
+                    console.warn('Auto-continue failed:', error.message);
+                } finally {
+                    autoContinueInFlight = false;
+                }
+            }
+            lastTimeLeft = s.timeLeft;
+
+            const monitorTime = document.getElementById('m-time');
+            const monitorLogo = document.getElementById('m-logo-img');
+
+            if (s.mode === 'logo') {
+                monitorTime.classList.add('hidden');
+                if (s.logoData) monitorLogo.classList.remove('hidden');
+                else { monitorTime.innerText = "IDLE"; monitorTime.style.color = '#22c55e'; monitorTime.classList.remove('hidden'); }
+            } else {
+                monitorTime.classList.remove('hidden');
+                monitorLogo.classList.add('hidden');
+                
+                if (s.mode === 'timeofday') { 
+                    monitorTime.innerText = new Date().toLocaleTimeString('en-US', {hour12: false, hour:'2-digit', minute:'2-digit'}); 
+                    monitorTime.style.color = '#22c55e';
+                } else {
+                    if (s.mode === 'target') {
+                        monitorTime.innerText = formatCountdownSignedDDHHMMSS(s.timeLeft);
+                    } else {
+                        const abs = Math.abs(s.timeLeft);
+                        monitorTime.innerText = (s.timeLeft < 0 ? "-" : "") + Math.floor(abs/60).toString().padStart(2,'0') + ":" + (abs%60).toString().padStart(2,'0');
+                    }
+                    if (s.mode === 'countdown') {
+                        if (s.timeLeft <= 0) monitorTime.style.color = s.blink_state ? '#000000' : '#ef4444';
+                        else if (s.timeLeft <= 120) monitorTime.style.color = '#f97316'; 
+                        else monitorTime.style.color = '#22c55e';
+                    } else monitorTime.style.color = '#22c55e';
+                }
+            }
+            
+            document.getElementById('msg-preview-text').innerText = s.message || "None";
+            const badge = document.getElementById('msg-badge');
+            const toggleBtn = document.getElementById('btn-toggle');
+            
+            if(s.showMessage) { badge.innerText = "LIVE ON STAGE"; badge.className = "msg-status-badge status-live"; toggleBtn.innerText = "HIDE MESSAGE"; toggleBtn.className = "btn btn-toggle btn-toggle-on"; } 
+            else { badge.innerText = "OFF AIR"; badge.className = "msg-status-badge status-off"; toggleBtn.innerText = "SHOW MESSAGE"; toggleBtn.className = "btn btn-toggle btn-toggle-off"; }
+
+            document.getElementById('b-start').classList.toggle('hidden', s.isRunning);
+            document.getElementById('b-pause').classList.toggle('hidden', !s.isRunning);
+        });
+
+        socket.on('messagesUpdate', msgs => {
+            const grid = document.getElementById('quick-messages-grid');
+            grid.innerHTML = '';
+            msgs.forEach((msg, index) => {
+                const wrapper = document.createElement('div'); wrapper.style.position = 'relative'; wrapper.style.display = 'flex';
+                const btn = document.createElement('button'); btn.className = "btn-msg-bank";
+                btn.innerHTML = `<span class="msg-number-badge">${index + 1}</span><span>${msg}</span>`;
+                btn.onclick = async () => {
+                    const postRes = await apiPost('/api/message/trigger', { index });
+                    if (!v2OnlyMode && !postRes) fetch(`/api/message/trigger?index=${index}`, { headers: getApiHeaders(false) });
+                };
+                
+                const delBtn = document.createElement('button'); delBtn.innerHTML = '×';
+                delBtn.style.cssText = "position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:#ef4444; font-size:22px; cursor:pointer; opacity:0; transition:opacity 0.2s;";
+                
+                wrapper.onmouseover = () => delBtn.style.opacity = "0.8"; wrapper.onmouseout = () => delBtn.style.opacity = "0";
+                delBtn.onmouseover = () => delBtn.style.opacity = "1"; delBtn.onclick = async (e) => {
+                    e.stopPropagation();
+                    const postRes = await apiPost('/api/messages/remove', { index });
+                    if (!v2OnlyMode && !postRes) fetch(`/api/messages/remove?index=${index}`, { headers: getApiHeaders(false) });
+                };
+                
+                wrapper.appendChild(btn); wrapper.appendChild(delBtn); grid.appendChild(wrapper);
+            });
+        });
+
+        window.addEventListener('load', () => {
+            const tokenInput = document.getElementById('admin-token');
+            if (tokenInput) tokenInput.value = adminToken;
+            const hintPinToggle = document.getElementById('hint-pin-toggle');
+            hintPinToggle.checked = localStorage.getItem('hintPinToPresenter') !== '0';
+            hintPinToggle.addEventListener('change', () => localStorage.setItem('hintPinToPresenter', hintPinToggle.checked ? '1' : '0'));
+            setRundownFlowMode(localStorage.getItem('rundownFlowMode') || 'overflow');
+            document.getElementById('hint-threshold-seconds').value = getHintThreshold();
+            loadRundown();
+        });
+    </script>
+</body>
+</html>
