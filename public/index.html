@@ -170,6 +170,29 @@
                 </div>
                 <p style="font-size:11px; color:var(--text-dim); margin:0;">Stored only in this browser (localStorage).</p>
             </div>
+
+            <div class="sys-group">
+                <h3>Event branding and color config</h3>
+                <p style="font-size:11px; color:var(--text-dim); margin-top:-8px;">Semantic presenter colors (ok, warning, overflow). Supports hex/rgb[a]/hsl[a].</p>
+                <div class="sys-row" style="align-items:center;">
+                    <label style="width:72px; font-size:12px; color:var(--text-dim);">OK</label>
+                    <input type="color" id="presenter-color-ok-picker" class="sys-input" style="flex:none; width:58px; padding:4px;">
+                    <input type="text" id="presenter-color-ok" class="sys-input" placeholder="#22c55e / rgb(...) / hsl(...)">
+                </div>
+                <div class="sys-row" style="align-items:center;">
+                    <label style="width:72px; font-size:12px; color:var(--text-dim);">Warning</label>
+                    <input type="color" id="presenter-color-warning-picker" class="sys-input" style="flex:none; width:58px; padding:4px;">
+                    <input type="text" id="presenter-color-warning" class="sys-input" placeholder="#f97316 / rgb(...) / hsl(...)">
+                </div>
+                <div class="sys-row" style="align-items:center;">
+                    <label style="width:72px; font-size:12px; color:var(--text-dim);">Overflow</label>
+                    <input type="color" id="presenter-color-overflow-picker" class="sys-input" style="flex:none; width:58px; padding:4px;">
+                    <input type="text" id="presenter-color-overflow" class="sys-input" placeholder="#ef4444 / rgb(...) / hsl(...)">
+                </div>
+                <div class="sys-row" style="margin-bottom:0;">
+                    <button onclick="savePresenterColors()" class="sys-btn" style="width:100%;">SAVE PRESENTER COLORS</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -410,6 +433,8 @@
             let rundownFlowMode = localStorage.getItem('rundownFlowMode') || 'overflow';
             let v2OnlyMode = false;
             let selectedTargetISO = null;
+            const presenterColorDefaults = { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' };
+            let presenterColors = { ...presenterColorDefaults };
 
         // Audio Cues Logic
         let audioEnabled = false;
@@ -629,6 +654,62 @@
             adminToken = document.getElementById('admin-token').value.trim();
             localStorage.setItem('stageTimerAdminToken', adminToken);
             alert('Admin token saved locally in this browser.');
+        }
+
+        function isHexColor(value) {
+            return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(value || '').trim());
+        }
+
+        function syncPresenterColorPickers() {
+            const pairs = [
+                ['ok', '#presenter-color-ok', '#presenter-color-ok-picker'],
+                ['warning', '#presenter-color-warning', '#presenter-color-warning-picker'],
+                ['overflow', '#presenter-color-overflow', '#presenter-color-overflow-picker'],
+            ];
+            pairs.forEach(([, textSel, pickerSel]) => {
+                const textEl = document.querySelector(textSel);
+                const pickerEl = document.querySelector(pickerSel);
+                if (!textEl || !pickerEl) return;
+                const value = String(textEl.value || '').trim();
+                pickerEl.value = isHexColor(value) ? value : '#000000';
+            });
+        }
+
+        function hydratePresenterColorInputs(colors = {}) {
+            presenterColors = { ...presenterColorDefaults, ...(colors || {}) };
+            document.getElementById('presenter-color-ok').value = presenterColors.ok || presenterColorDefaults.ok;
+            document.getElementById('presenter-color-warning').value = presenterColors.warning || presenterColorDefaults.warning;
+            document.getElementById('presenter-color-overflow').value = presenterColors.overflow || presenterColorDefaults.overflow;
+            syncPresenterColorPickers();
+        }
+
+        async function loadDisplayConfig() {
+            try {
+                const res = await fetch('/api/display-config', { headers: getApiHeaders(false) });
+                if (!res.ok) return;
+                const data = await res.json();
+                hydratePresenterColorInputs(data.presenterColors);
+            } catch (error) {
+                console.warn('Display config load failed:', error.message);
+            }
+        }
+
+        async function savePresenterColors() {
+            const payload = {
+                presenterColors: {
+                    ok: document.getElementById('presenter-color-ok').value.trim(),
+                    warning: document.getElementById('presenter-color-warning').value.trim(),
+                    overflow: document.getElementById('presenter-color-overflow').value.trim(),
+                },
+            };
+            try {
+                const res = await apiPost('/api/display-config', payload);
+                const data = await res.json();
+                hydratePresenterColorInputs((data.displayConfig || {}).presenterColors);
+                alert('Presenter colors saved.');
+            } catch (error) {
+                alert(`Save failed: ${error.message}`);
+            }
         }
 
         function openTargetModal() { document.getElementById('target-modal').classList.add('active'); }
@@ -1030,6 +1111,7 @@
         }
 
         socket.on('stateUpdate', async s => {
+            presenterColors = { ...presenterColorDefaults, ...(s.presenterColors || {}) };
             document.getElementById('ip-display').innerText = s.ip;
             document.getElementById('current-ip-info').innerText = `Current Interface: ${s.ip} (Netmask: ${s.netmask || 'N/A'})`;
             
@@ -1141,10 +1223,10 @@
                         monitorTime.innerText = (s.timeLeft < 0 ? "-" : "") + Math.floor(abs/60).toString().padStart(2,'0') + ":" + (abs%60).toString().padStart(2,'0');
                     }
                     if (s.mode === 'countdown') {
-                        if (s.timeLeft <= 0) monitorTime.style.color = s.blink_state ? '#000000' : '#ef4444';
-                        else if (s.timeLeft <= 120) monitorTime.style.color = '#f97316'; 
-                        else monitorTime.style.color = '#22c55e';
-                    } else monitorTime.style.color = '#22c55e';
+                        if (s.timeLeft <= 0) monitorTime.style.color = presenterColors.overflow;
+                        else if (s.timeLeft <= 120) monitorTime.style.color = presenterColors.warning; 
+                        else monitorTime.style.color = presenterColors.ok;
+                    } else monitorTime.style.color = presenterColors.ok;
                 }
             }
             
@@ -1188,11 +1270,20 @@
         window.addEventListener('load', () => {
             const tokenInput = document.getElementById('admin-token');
             if (tokenInput) tokenInput.value = adminToken;
+            hydratePresenterColorInputs();
+            [['ok', 'presenter-color-ok'], ['warning', 'presenter-color-warning'], ['overflow', 'presenter-color-overflow']].forEach(([key, textId]) => {
+                const textEl = document.getElementById(textId);
+                const pickerEl = document.getElementById(`${textId}-picker`);
+                if (!textEl || !pickerEl) return;
+                pickerEl.addEventListener('input', () => { textEl.value = pickerEl.value; });
+                textEl.addEventListener('input', syncPresenterColorPickers);
+            });
             const hintPinToggle = document.getElementById('hint-pin-toggle');
             hintPinToggle.checked = localStorage.getItem('hintPinToPresenter') !== '0';
             hintPinToggle.addEventListener('change', () => localStorage.setItem('hintPinToPresenter', hintPinToggle.checked ? '1' : '0'));
             setRundownFlowMode(localStorage.getItem('rundownFlowMode') || 'overflow');
             document.getElementById('hint-threshold-seconds').value = getHintThreshold();
+            loadDisplayConfig();
             loadRundown();
         });
     </script>

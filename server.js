@@ -16,6 +16,11 @@ app.use(express.json({ limit: '10mb' }));
 
 const store = new StateStore();
 const bootData = store.init();
+const DEFAULT_PRESENTER_COLORS = {
+  ok: '#22c55e',
+  warning: '#f97316',
+  overflow: '#ef4444',
+};
 
 if (!bootData.config.uuid) {
   bootData.config.uuid = crypto.randomUUID();
@@ -79,6 +84,8 @@ try {
 
 const timer = new TimerEngine({ ...bootData.state, logoData });
 const queue = new QueueEngine(bootData.rundown, timer.state.currentIndex || 0);
+let displayConfig = sanitizeDisplayConfig(bootData.display || {});
+store.saveDisplay(displayConfig);
 
 if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
@@ -108,6 +115,7 @@ function publicState() {
     currentSegment: queue.getCurrent(),
     currentIndex: queue.currentIndex,
     v2OnlyMode: strictV2Only,
+    presenterColors: sanitizePresenterColors(displayConfig.presenterColors),
   });
 }
 
@@ -134,6 +142,40 @@ function parseIntField(value, fieldName, opts = {}) {
   if (opts.min != null && val < opts.min) return { error: `${fieldName} must be >= ${opts.min}` };
   if (opts.max != null && val > opts.max) return { error: `${fieldName} must be <= ${opts.max}` };
   return { value: val };
+}
+
+function isAcceptedColorFormat(value) {
+  if (typeof value !== 'string') return false;
+  const color = value.trim();
+  if (!color) return false;
+  const hexRe = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+  const rgbRe = /^rgba?\(\s*(?:\d{1,3}%?\s*,\s*){2}\d{1,3}%?(?:\s*,\s*(?:0|1|0?\.\d+))?\s*\)$/i;
+  const hslRe = /^hsla?\(\s*-?\d{1,3}(?:\.\d+)?(?:deg|rad|turn)?\s*,\s*\d{1,3}%\s*,\s*\d{1,3}%(?:\s*,\s*(?:0|1|0?\.\d+))?\s*\)$/i;
+  return hexRe.test(color) || rgbRe.test(color) || hslRe.test(color);
+}
+
+function sanitizePresenterColors(colors) {
+  const input = (colors && typeof colors === 'object') ? colors : {};
+  return {
+    ok: isAcceptedColorFormat(input.ok) ? String(input.ok).trim() : DEFAULT_PRESENTER_COLORS.ok,
+    warning: isAcceptedColorFormat(input.warning) ? String(input.warning).trim() : DEFAULT_PRESENTER_COLORS.warning,
+    overflow: isAcceptedColorFormat(input.overflow) ? String(input.overflow).trim() : DEFAULT_PRESENTER_COLORS.overflow,
+  };
+}
+
+function sanitizeDisplayConfig(nextDisplay) {
+  const merged = {
+    ...(bootData.display || {}),
+    ...(nextDisplay || {}),
+  };
+  return {
+    ...merged,
+    presenterColors: sanitizePresenterColors(merged.presenterColors),
+  };
+}
+
+function persistDisplayConfig() {
+  store.saveDisplay(displayConfig);
 }
 
 function legacyRoute(pathName, handler, options = {}) {
@@ -287,7 +329,15 @@ app.get('/icon.svg', (req, res) => {
 });
 
 app.get('/api/state', (req, res) => res.json(publicState()));
+app.get('/api/display-config', (req, res) => res.json(displayConfig));
 app.get('/api/messages', (req, res) => res.json(quickMessages));
+
+app.post('/api/display-config', requireAdmin, (req, res) => {
+  displayConfig = sanitizeDisplayConfig({ ...displayConfig, ...(req.body || {}) });
+  persistDisplayConfig();
+  broadcast();
+  res.json({ ok: true, displayConfig });
+});
 
 app.post('/api/start', (req, res) => {
   timer.start();
