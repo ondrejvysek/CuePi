@@ -26,6 +26,10 @@ const bindHost = process.env.BIND_HOST || '0.0.0.0';
 const corsOrigin = process.env.CORS_ORIGIN || bootData.config.corsOrigin || '*';
 const adminToken = process.env.STAGE_TIMER_ADMIN_TOKEN || bootData.config.adminToken || '';
 const strictV2Only = process.env.STAGE_TIMER_V2_ONLY === 'true' || bootData.config.v2OnlyMode === true;
+const apConnectionName = process.env.CUEPI_AP_CONNECTION || 'CuePi_Fallback';
+const legacyApConnectionName = process.env.LEGACY_AP_CONNECTION || 'StageTimer_Fallback';
+const systemdServiceName = process.env.CUEPI_SERVICE_NAME || 'cuepi';
+const legacySystemdServiceName = process.env.LEGACY_CUEPI_SERVICE_NAME || 'stage-timer';
 
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', corsOrigin);
@@ -273,13 +277,13 @@ app.get('/manifest.json', (req, res) => {
     display: 'standalone',
     background_color: '#0f172a',
     theme_color: '#0f172a',
-    icons: [{ src: '/icon.svg', sizes: '512x512', type: 'image/svg+xml' }],
+    icons: [{ src: '/icon.png', sizes: '512x512', type: 'image/png' }],
   });
 });
 
 app.get('/icon.svg', (req, res) => {
   res.setHeader('Content-Type', 'image/svg+xml');
-  res.send("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230f172a'/><text x='50' y='65' font-family='sans-serif' font-size='50' font-weight='bold' fill='%2322c55e' text-anchor='middle'>ST</text></svg>");
+  res.send("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230f172a'/><text x='50' y='62' font-family='sans-serif' font-size='34' font-weight='bold' fill='%2322c55e' text-anchor='middle'>Cue</text><text x='50' y='86' font-family='sans-serif' font-size='26' font-weight='bold' fill='%2360a5fa' text-anchor='middle'>Pi</text></svg>");
 });
 
 app.get('/api/state', (req, res) => res.json(publicState()));
@@ -469,12 +473,15 @@ legacyRoute('/api/system/logo/clear', (req, res) => {
 
 app.post('/api/system/restart', requireAdmin, (req, res) => {
   res.json({ ok: true, status: 'Restarting system service' });
-  runCommand('sudo', ['systemctl', 'restart', 'stage-timer'], () => {});
+  runCommand('sudo', ['systemctl', 'restart', systemdServiceName], (error) => {
+    if (!error) return;
+    runCommand('sudo', ['systemctl', 'restart', legacySystemdServiceName], () => {});
+  });
 });
 
 app.post('/api/system/update', requireAdmin, (req, res) => {
   res.json({ ok: true, status: 'Pulling firmware and system updates' });
-  runCommand('bash', ['-lc', 'git pull && npm install && sudo apt update && sudo apt upgrade -y && sudo systemctl restart stage-timer'], () => {});
+  runCommand('bash', ['-lc', `git pull && npm install && sudo apt update && sudo apt upgrade -y && (sudo systemctl restart ${systemdServiceName} || sudo systemctl restart ${legacySystemdServiceName})`], () => {});
 });
 
 app.post('/api/system/hostname', requireAdmin, (req, res) => {
@@ -492,16 +499,19 @@ app.post('/api/system/ap', requireAdmin, (req, res) => {
   const action = req.body?.action;
   if (!['on', 'off'].includes(action)) return structuredError(res, 400, 'Invalid payload', 'action must be on/off');
   const desired = action === 'on' ? 'up' : 'down';
-  runCommand('sudo', ['nmcli', 'con', desired, 'StageTimer_Fallback'], (error) => {
-    if (error) return structuredError(res, 500, 'Failed to switch fallback AP');
-    return res.json({ ok: true, status: `AP ${desired}` });
+  runCommand('sudo', ['nmcli', 'con', desired, apConnectionName], (error) => {
+    if (!error) return res.json({ ok: true, status: `AP ${desired}` });
+    runCommand('sudo', ['nmcli', 'con', desired, legacyApConnectionName], (legacyError) => {
+      if (legacyError) return structuredError(res, 500, 'Failed to switch fallback AP');
+      return res.json({ ok: true, status: `AP ${desired} (legacy connection)` });
+    });
   });
 });
 
 app.get('/api/system/ap/status', requireAdmin, (req, res) => {
   runCommand('nmcli', ['-t', '-f', 'NAME', 'con', 'show', '--active'], (error, stdout) => {
     if (error) return res.json({ active: false });
-    const isActive = stdout.includes('StageTimer_Fallback');
+    const isActive = stdout.includes(apConnectionName) || stdout.includes(legacyApConnectionName);
     return res.json({ active: isActive });
   });
 });
