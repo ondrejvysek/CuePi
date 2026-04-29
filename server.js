@@ -17,9 +17,9 @@ app.use(express.json({ limit: '10mb' }));
 const store = new StateStore();
 const bootData = store.init();
 const DEFAULT_PRESENTER_COLORS = {
-  ok: '#22c55e',
-  warning: '#f97316',
-  overflow: '#ef4444',
+  timerText: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
+  background: { ok: '#000000', warning: '#f97316', overflow: '#ef4444' },
+  indicator: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
 };
 
 if (!bootData.config.uuid) {
@@ -156,10 +156,23 @@ function isAcceptedColorFormat(value) {
 
 function sanitizePresenterColors(colors) {
   const input = (colors && typeof colors === 'object') ? colors : {};
+  const legacy = {
+    ok: isAcceptedColorFormat(input.ok) ? String(input.ok).trim() : DEFAULT_PRESENTER_COLORS.timerText.ok,
+    warning: isAcceptedColorFormat(input.warning) ? String(input.warning).trim() : DEFAULT_PRESENTER_COLORS.timerText.warning,
+    overflow: isAcceptedColorFormat(input.overflow) ? String(input.overflow).trim() : DEFAULT_PRESENTER_COLORS.timerText.overflow,
+  };
+  const sanitizeSemanticSet = (setInput, fallback) => {
+    const set = (setInput && typeof setInput === 'object') ? setInput : {};
+    return {
+      ok: isAcceptedColorFormat(set.ok) ? String(set.ok).trim() : fallback.ok,
+      warning: isAcceptedColorFormat(set.warning) ? String(set.warning).trim() : fallback.warning,
+      overflow: isAcceptedColorFormat(set.overflow) ? String(set.overflow).trim() : fallback.overflow,
+    };
+  };
   return {
-    ok: isAcceptedColorFormat(input.ok) ? String(input.ok).trim() : DEFAULT_PRESENTER_COLORS.ok,
-    warning: isAcceptedColorFormat(input.warning) ? String(input.warning).trim() : DEFAULT_PRESENTER_COLORS.warning,
-    overflow: isAcceptedColorFormat(input.overflow) ? String(input.overflow).trim() : DEFAULT_PRESENTER_COLORS.overflow,
+    timerText: sanitizeSemanticSet(input.timerText, legacy),
+    background: sanitizeSemanticSet(input.background, DEFAULT_PRESENTER_COLORS.background),
+    indicator: sanitizeSemanticSet(input.indicator, DEFAULT_PRESENTER_COLORS.indicator),
   };
 }
 
