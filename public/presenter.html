@@ -108,9 +108,16 @@
         let localTimeInterval = null;
         const defaultPresenterColors = { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' };
         const blackValues = new Set(['#000', '#000000', 'black', 'rgb(0,0,0)', 'rgb(0, 0, 0)']);
+        function getPresenterTextColors(colors = {}) {
+            if (colors && typeof colors === 'object' && colors.text && typeof colors.text === 'object') {
+                return colors.text;
+            }
+            return colors;
+        }
 
         function normalizePresenterColors(colors) {
-            const next = { ...defaultPresenterColors, ...(colors || {}) };
+            const textColors = getPresenterTextColors(colors || {});
+            const next = { ...defaultPresenterColors, ...(textColors || {}) };
             const okRaw = String(next.ok || '').trim().toLowerCase();
             if (!okRaw || blackValues.has(okRaw)) next.ok = defaultPresenterColors.ok;
             return next;

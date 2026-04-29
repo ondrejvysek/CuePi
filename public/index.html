@@ -437,6 +437,12 @@
             const presenterColorDefaults = { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' };
             let presenterColors = { ...presenterColorDefaults };
             const presenterBlackValues = new Set(['#000', '#000000', 'black', 'rgb(0,0,0)', 'rgb(0, 0, 0)']);
+            function getPresenterTextColors(colors = {}) {
+                if (colors && typeof colors === 'object' && colors.text && typeof colors.text === 'object') {
+                    return colors.text;
+                }
+                return colors;
+            }
 
         // Audio Cues Logic
         let audioEnabled = false;
@@ -675,7 +681,8 @@
         }
 
         function hydratePresenterColorInputs(colors = {}) {
-            presenterColors = { ...presenterColorDefaults, ...(colors || {}) };
+            const textColors = getPresenterTextColors(colors || {});
+            presenterColors = { ...presenterColorDefaults, ...(textColors || {}) };
             const okRaw = String(presenterColors.ok || '').trim().toLowerCase();
             if (!okRaw || presenterBlackValues.has(okRaw)) presenterColors.ok = presenterColorDefaults.ok;
             document.getElementById('presenter-color-ok').value = presenterColors.ok || presenterColorDefaults.ok;
@@ -1153,11 +1160,7 @@
         }
 
         socket.on('stateUpdate', async s => {
-            presenterColors = {
-                timerText: { ...presenterColorDefaults.timerText, ...((s.presenterColors || {}).timerText || {}) },
-                background: { ...presenterColorDefaults.background, ...((s.presenterColors || {}).background || {}) },
-                indicator: { ...presenterColorDefaults.indicator, ...((s.presenterColors || {}).indicator || {}) },
-            };
+            presenterColors = { ...presenterColorDefaults, ...(getPresenterTextColors(s.presenterColors) || {}) };
             document.getElementById('ip-display').innerText = s.ip;
             document.getElementById('current-ip-info').innerText = `Current Interface: ${s.ip} (Netmask: ${s.netmask || 'N/A'})`;
             
