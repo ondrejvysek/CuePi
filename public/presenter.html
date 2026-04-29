@@ -152,8 +152,8 @@
             }
 
             document.body.classList.remove('state-warning', 'state-overflow');
-            document.body.style.color = semanticColors.timerText.ok;
-            document.body.style.backgroundColor = semanticColors.background.ok;
+            document.body.style.color = '';
+            document.body.style.backgroundColor = '';
 
             if (state.mode === 'timeofday') {
                 logoDisplay.style.display = 'none';
@@ -207,9 +207,16 @@
                 if (fontSizeVw > 28) fontSizeVw = 28;
                 clock.style.fontSize = fontSizeVw + "vw";
 
-                if (semanticState === 'overflow') document.body.classList.add('state-overflow');
-                else if (semanticState === 'warning') document.body.classList.add('state-warning');
-                else document.body.style.color = semanticColors.timerText.ok;
+                if (semanticState === 'overflow') {
+                    document.body.style.backgroundColor = semanticColors.overflow;
+                    document.body.style.color = '#ffffff';
+                } else if (semanticState === 'warning') {
+                    document.body.style.backgroundColor = semanticColors.warning;
+                    document.body.style.color = '#ffffff';
+                } else {
+                    document.body.style.backgroundColor = '#000000';
+                    document.body.style.color = semanticColors.ok;
+                }
 
                 if (state.mode === 'countdown') {
                     const progress = state.timeLeft <= 0 ? 0 : (state.timeLeft / state.initialTime) * 100;
