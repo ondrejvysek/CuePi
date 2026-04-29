@@ -330,9 +330,13 @@ app.get('/icon.svg', (req, res) => {
 
 app.get('/api/state', (req, res) => res.json(publicState()));
 app.get('/api/display-config', (req, res) => res.json(displayConfig));
+
+app.get('/presenter.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'presenter.html'));
+});
 app.get('/api/messages', (req, res) => res.json(quickMessages));
 
-app.post('/api/display-config', requireAdmin, (req, res) => {
+app.post('/api/display-config', (req, res) => {
   displayConfig = sanitizeDisplayConfig({ ...displayConfig, ...(req.body || {}) });
   persistDisplayConfig();
   broadcast();
