@@ -21,6 +21,11 @@ const DEFAULT_PRESENTER_COLORS = {
   background: { ok: '#000000', warning: '#f97316', overflow: '#ef4444' },
   indicator: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
 };
+const DEFAULT_PRESENTER_COLOR_GROUPS = {
+  text: { ...DEFAULT_PRESENTER_COLORS },
+  background: { ...DEFAULT_PRESENTER_COLORS },
+  indicator: { ...DEFAULT_PRESENTER_COLORS },
+};
 
 if (!bootData.config.uuid) {
   bootData.config.uuid = crypto.randomUUID();
@@ -156,19 +161,21 @@ function isAcceptedColorFormat(value) {
 
 function sanitizePresenterColors(colors) {
   const input = (colors && typeof colors === 'object') ? colors : {};
-  const legacy = {
-    ok: isAcceptedColorFormat(input.ok) ? String(input.ok).trim() : DEFAULT_PRESENTER_COLORS.timerText.ok,
-    warning: isAcceptedColorFormat(input.warning) ? String(input.warning).trim() : DEFAULT_PRESENTER_COLORS.timerText.warning,
-    overflow: isAcceptedColorFormat(input.overflow) ? String(input.overflow).trim() : DEFAULT_PRESENTER_COLORS.timerText.overflow,
-  };
-  const sanitizeSemanticSet = (setInput, fallback) => {
-    const set = (setInput && typeof setInput === 'object') ? setInput : {};
+  const sanitizeTriplet = (triplet, fallback) => ({
+    ok: isAcceptedColorFormat(triplet?.ok) ? String(triplet.ok).trim() : fallback.ok,
+    warning: isAcceptedColorFormat(triplet?.warning) ? String(triplet.warning).trim() : fallback.warning,
+    overflow: isAcceptedColorFormat(triplet?.overflow) ? String(triplet.overflow).trim() : fallback.overflow,
+  });
+
+  const hasGrouped = input.text || input.background || input.indicator;
+  if (hasGrouped) {
     return {
-      ok: isAcceptedColorFormat(set.ok) ? String(set.ok).trim() : fallback.ok,
-      warning: isAcceptedColorFormat(set.warning) ? String(set.warning).trim() : fallback.warning,
-      overflow: isAcceptedColorFormat(set.overflow) ? String(set.overflow).trim() : fallback.overflow,
+      text: sanitizeTriplet(input.text || {}, DEFAULT_PRESENTER_COLOR_GROUPS.text),
+      background: sanitizeTriplet(input.background || {}, DEFAULT_PRESENTER_COLOR_GROUPS.background),
+      indicator: sanitizeTriplet(input.indicator || {}, DEFAULT_PRESENTER_COLOR_GROUPS.indicator),
     };
-  };
+  }
+
   return {
     timerText: sanitizeSemanticSet(input.timerText, legacy),
     background: sanitizeSemanticSet(input.background, DEFAULT_PRESENTER_COLORS.background),

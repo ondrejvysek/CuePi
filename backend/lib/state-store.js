@@ -32,8 +32,8 @@ const DEFAULT_DISPLAY = {
   scale: 1,
   margin: 24,
   presenterColors: {
-    timerText: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
-    background: { ok: '#000000', warning: '#f97316', overflow: '#ef4444' },
+    text: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
+    background: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
     indicator: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
   },
 };
