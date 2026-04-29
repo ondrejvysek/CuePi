@@ -21,6 +21,11 @@ const DEFAULT_PRESENTER_COLORS = {
   warning: '#f97316',
   overflow: '#ef4444',
 };
+const DEFAULT_PRESENTER_COLOR_GROUPS = {
+  text: { ...DEFAULT_PRESENTER_COLORS },
+  background: { ...DEFAULT_PRESENTER_COLORS },
+  indicator: { ...DEFAULT_PRESENTER_COLORS },
+};
 
 if (!bootData.config.uuid) {
   bootData.config.uuid = crypto.randomUUID();
@@ -156,6 +161,21 @@ function isAcceptedColorFormat(value) {
 
 function sanitizePresenterColors(colors) {
   const input = (colors && typeof colors === 'object') ? colors : {};
+  const sanitizeTriplet = (triplet, fallback) => ({
+    ok: isAcceptedColorFormat(triplet?.ok) ? String(triplet.ok).trim() : fallback.ok,
+    warning: isAcceptedColorFormat(triplet?.warning) ? String(triplet.warning).trim() : fallback.warning,
+    overflow: isAcceptedColorFormat(triplet?.overflow) ? String(triplet.overflow).trim() : fallback.overflow,
+  });
+
+  const hasGrouped = input.text || input.background || input.indicator;
+  if (hasGrouped) {
+    return {
+      text: sanitizeTriplet(input.text || {}, DEFAULT_PRESENTER_COLOR_GROUPS.text),
+      background: sanitizeTriplet(input.background || {}, DEFAULT_PRESENTER_COLOR_GROUPS.background),
+      indicator: sanitizeTriplet(input.indicator || {}, DEFAULT_PRESENTER_COLOR_GROUPS.indicator),
+    };
+  }
+
   return {
     ok: isAcceptedColorFormat(input.ok) ? String(input.ok).trim() : DEFAULT_PRESENTER_COLORS.ok,
     warning: isAcceptedColorFormat(input.warning) ? String(input.warning).trim() : DEFAULT_PRESENTER_COLORS.warning,
@@ -330,13 +350,22 @@ app.get('/icon.svg', (req, res) => {
 
 app.get('/api/state', (req, res) => res.json(publicState()));
 app.get('/api/display-config', (req, res) => res.json(displayConfig));
+
+app.get('/presenter.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'presenter.html'));
+});
 app.get('/api/messages', (req, res) => res.json(quickMessages));
 
-app.post('/api/display-config', requireAdmin, (req, res) => {
-  displayConfig = sanitizeDisplayConfig({ ...displayConfig, ...(req.body || {}) });
-  persistDisplayConfig();
-  broadcast();
-  res.json({ ok: true, displayConfig });
+app.post('/api/display-config', (req, res) => {
+  try {
+    displayConfig = sanitizeDisplayConfig({ ...displayConfig, ...(req.body || {}) });
+    persistDisplayConfig();
+    broadcast();
+    res.json({ ok: true, displayConfig });
+  } catch (error) {
+    console.error('Display config save failed:', error);
+    structuredError(res, 500, 'Display config save failed', String(error?.message || error));
+  }
 });
 
 app.post('/api/start', (req, res) => {
