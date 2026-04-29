@@ -171,28 +171,6 @@
                 <p style="font-size:11px; color:var(--text-dim); margin:0;">Stored only in this browser (localStorage).</p>
             </div>
 
-            <div class="sys-group">
-                <h3>Event branding and color config</h3>
-                <p style="font-size:11px; color:var(--text-dim); margin-top:-8px;">Semantic presenter colors (ok, warning, overflow). Supports hex/rgb[a]/hsl[a].</p>
-                <div class="sys-row" style="align-items:center;">
-                    <label style="width:72px; font-size:12px; color:var(--text-dim);">OK</label>
-                    <input type="color" id="presenter-color-ok-picker" class="sys-input" style="flex:none; width:58px; padding:4px;">
-                    <input type="text" id="presenter-color-ok" class="sys-input" placeholder="#22c55e / rgb(...) / hsl(...)">
-                </div>
-                <div class="sys-row" style="align-items:center;">
-                    <label style="width:72px; font-size:12px; color:var(--text-dim);">Warning</label>
-                    <input type="color" id="presenter-color-warning-picker" class="sys-input" style="flex:none; width:58px; padding:4px;">
-                    <input type="text" id="presenter-color-warning" class="sys-input" placeholder="#f97316 / rgb(...) / hsl(...)">
-                </div>
-                <div class="sys-row" style="align-items:center;">
-                    <label style="width:72px; font-size:12px; color:var(--text-dim);">Overflow</label>
-                    <input type="color" id="presenter-color-overflow-picker" class="sys-input" style="flex:none; width:58px; padding:4px;">
-                    <input type="text" id="presenter-color-overflow" class="sys-input" placeholder="#ef4444 / rgb(...) / hsl(...)">
-                </div>
-                <div class="sys-row" style="margin-bottom:0;">
-                    <button onclick="savePresenterColors()" class="sys-btn" style="width:100%;">SAVE PRESENTER COLORS</button>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -243,6 +221,22 @@
             <div class="custom-time-row" style="margin-top: 12px;">
                 <button onclick="closeImportPreviewModal()" class="btn-set" style="background:#334155;">Cancel</button>
                 <button onclick="confirmRundownCsvImport()" class="btn-set">Import</button>
+            </div>
+        </div>
+    </div>
+    <div id="branding-colors-modal" class="modal-overlay">
+        <div class="modal-content" style="width:min(760px,96vw);">
+            <div class="modal-title">
+                BRANDING COLORS
+                <button onclick="closeBrandingColorsModal()" style="background:none; border:none; color:white; font-size:20px; cursor:pointer;">×</button>
+            </div>
+            <div class="sys-group" style="margin-bottom:0;">
+                <h3>Event branding and color config</h3>
+                <p style="font-size:11px; color:var(--text-dim); margin-top:-8px;">Semantic colors (ok/warning/overflow) for timer text, background, and indicator.</p>
+                <div id="branding-color-grid"></div>
+                <div class="sys-row" style="margin-top:10px; margin-bottom:0;">
+                    <button onclick="savePresenterColors()" class="sys-btn" style="width:100%;">SAVE PRESENTER COLORS</button>
+                </div>
             </div>
         </div>
     </div>
@@ -401,7 +395,7 @@
                 </section>
 
                 <section class="card">
-                    <h2>Event Logo Upload</h2>
+                    <h2>Branding</h2>
                     <div class="logo-preview-box" id="logo-preview-container">
                         <span class="logo-empty-text" id="logo-empty-hint">No Logo Uploaded</span>
                         <img id="logo-preview-img" src="" class="hidden">
@@ -410,6 +404,13 @@
                         <input type="file" id="logo-input" accept="image/*" class="hidden" onchange="handleLogoSelection(this)">
                         <button onclick="document.getElementById('logo-input').click()" class="btn-set" style="flex:1; padding: 15px;">UPLOAD LOGO</button>
                         <button onclick="clearLogo()" class="btn-set" style="background: var(--red); flex:none; padding: 0 20px;">🗑️</button>
+                    </div>
+                    <div class="sys-group" style="margin-top:12px; margin-bottom:0;">
+                        <h3>Event branding and color config</h3>
+                        <p style="font-size:11px; color:var(--text-dim); margin-top:-8px;">Open popup to manage timer text, background, and indicator semantic colors.</p>
+                        <div class="sys-row" style="margin-bottom:0;">
+                            <button onclick="openBrandingColorsModal()" class="sys-btn" style="width:100%;">MANAGE COLORS</button>
+                        </div>
                     </div>
                 </section>
             </div>
@@ -563,6 +564,8 @@
 
         function openSettings() { document.getElementById('settings-modal').classList.add('active'); checkAPStatus(); }
         function closeSettings() { document.getElementById('settings-modal').classList.remove('active'); }
+        function openBrandingColorsModal() { document.getElementById('branding-colors-modal').classList.add('active'); }
+        function closeBrandingColorsModal() { document.getElementById('branding-colors-modal').classList.remove('active'); }
         async function confirmRestart() {
             try {
                 await apiPost('/api/system/restart', {});
@@ -668,14 +671,9 @@
         }
 
         function syncPresenterColorPickers() {
-            const pairs = [
-                ['ok', '#presenter-color-ok', '#presenter-color-ok-picker'],
-                ['warning', '#presenter-color-warning', '#presenter-color-warning-picker'],
-                ['overflow', '#presenter-color-overflow', '#presenter-color-overflow-picker'],
-            ];
-            pairs.forEach(([, textSel, pickerSel]) => {
-                const textEl = document.querySelector(textSel);
-                const pickerEl = document.querySelector(pickerSel);
+            document.querySelectorAll('[data-presenter-color-text]').forEach((textEl) => {
+                const target = textEl.dataset.presenterColorText;
+                const pickerEl = document.querySelector(`[data-presenter-color-picker="${target}"]`);
                 if (!textEl || !pickerEl) return;
                 const value = String(textEl.value || '').trim();
                 pickerEl.value = isHexColor(value) ? value : '#000000';
@@ -694,6 +692,35 @@
             if (warnEl) warnEl.value = presenterColors.warning || presenterColorDefaults.warning;
             if (overEl) overEl.value = presenterColors.overflow || presenterColorDefaults.overflow;
             syncPresenterColorPickers();
+        }
+
+        function ensureBrandingColorGrid() {
+            const container = document.getElementById('branding-color-grid');
+            if (!container || container.dataset.ready === '1') return;
+            const groups = [
+                ['timerText', 'Timer Text'],
+                ['background', 'Background'],
+                ['indicator', 'Indicator'],
+            ];
+            const semantics = [['ok', 'OK'], ['warning', 'Warning'], ['overflow', 'Overflow']];
+            groups.forEach(([groupKey, groupLabel]) => {
+                const title = document.createElement('div');
+                title.style.cssText = 'font-size:11px;color:#93c5fd;font-weight:700;margin:8px 0 4px;';
+                title.textContent = groupLabel;
+                container.appendChild(title);
+                semantics.forEach(([semanticKey, semanticLabel]) => {
+                    const row = document.createElement('div');
+                    row.className = 'sys-row';
+                    row.style.alignItems = 'center';
+                    row.innerHTML = `
+                        <label style="width:72px; font-size:12px; color:var(--text-dim);">${semanticLabel}</label>
+                        <input type="color" data-presenter-color-picker="${groupKey}.${semanticKey}" class="sys-input" style="flex:none; width:58px; padding:4px;">
+                        <input type="text" data-presenter-color-text="${groupKey}.${semanticKey}" class="sys-input" placeholder="#hex / rgb(...) / hsl(...)">
+                    `;
+                    container.appendChild(row);
+                });
+            });
+            container.dataset.ready = '1';
         }
 
         async function loadDisplayConfig() {
@@ -1288,11 +1315,12 @@
         window.addEventListener('load', () => {
             const tokenInput = document.getElementById('admin-token');
             if (tokenInput) tokenInput.value = adminToken;
+            ensureBrandingColorGrid();
             hydratePresenterColorInputs();
-            [['ok', 'presenter-color-ok'], ['warning', 'presenter-color-warning'], ['overflow', 'presenter-color-overflow']].forEach(([key, textId]) => {
-                const textEl = document.getElementById(textId);
-                const pickerEl = document.getElementById(`${textId}-picker`);
-                if (!textEl || !pickerEl) return;
+            document.querySelectorAll('[data-presenter-color-text]').forEach((textEl) => {
+                const target = textEl.dataset.presenterColorText;
+                const pickerEl = document.querySelector(`[data-presenter-color-picker="${target}"]`);
+                if (!pickerEl) return;
                 pickerEl.addEventListener('input', () => { textEl.value = pickerEl.value; });
                 textEl.addEventListener('input', syncPresenterColorPickers);
             });
