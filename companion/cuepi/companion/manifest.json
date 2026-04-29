@@ -1,7 +1,7 @@
 {
   "id": "custom-cuepi",
   "name": "CuePi",
-  "shortname": "cuepi",
+  "shortname": "stagetimer",
   "description": "Custom control module for the CuePi API.",
   "version": "1.0.0",
   "license": "MIT",
@@ -13,7 +13,7 @@
       "email": "admin@example.com"
     }
   ],
-  "legacyIds": ["stagetimer"],
+  "legacyIds": [],
   "runtime": {
     "type": "node18",
     "api": "nodejs-ipc",

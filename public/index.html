@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0f172a">
-    <link rel="apple-touch-icon" href="/icon.svg">
+    <link rel="apple-touch-icon" href="/icon.png">
 
     <script src="/socket.io/socket.io.js"></script>
     <style>
@@ -767,13 +767,13 @@
         function closeTargetModal() { document.getElementById('target-modal').classList.remove('active'); }
 
         function formatCountdownSignedDDHHMMSS(timeLeftSeconds) {
-            const sign = timeLeftSeconds > 0 ? '-' : '+';
             const abs = Math.abs(timeLeftSeconds);
             const days = Math.floor(abs / 86400);
             const hours = Math.floor((abs % 86400) / 3600);
             const mins = Math.floor((abs % 3600) / 60);
             const secs = abs % 60;
-            return `${sign}${days.toString().padStart(2, '0')} ${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            const dayLabel = days === 1 ? 'day' : 'days';
+            return `${days.toString().padStart(2, '0')} ${dayLabel} ${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         }
 
         async function setTargetMode() {
@@ -1227,7 +1227,7 @@
                     activeRundownHintStep = s.currentIndex;
                     lastRundownHintSegment = `${s.currentIndex}:${nextName}`;
 
-                    const nextMessage = nextNote;
+                    const nextMessage = nextNote ? `Up next: ${nextNote}` : '';
                     autoRundownMessageText = nextMessage;
                     autoRundownMessageStep = s.currentIndex;
                     if (document.getElementById('hint-pin-toggle').checked && nextMessage) {
