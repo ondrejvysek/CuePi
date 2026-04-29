@@ -9,7 +9,7 @@ echo "================================================="
 # --- CONFIGURATION ---
 REPO_URL="https://github.com/ondrejvysek/cuepi.git"
 CURRENT_USER=$(whoami)
-APP_DIR="$HOME/stage-timer"
+APP_DIR="$HOME/cuepi"
 AP_CONNECTION_NAME="CuePi_Fallback"
 LEGACY_AP_CONNECTION_NAME="StageTimer_Fallback"
 AP_SSID="CuePi_AP"
