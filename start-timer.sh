@@ -10,5 +10,20 @@ xset s noblank
 openbox-session &
 
 # Launch Chromium natively in X11 immediately to the loading page.
-# The loading page handles the polling/redirecting to Node.js!
-exec chromium --kiosk --noerrdialogs --disable-infobars --check-for-update-interval=31536000 "file://$HOME/stage-timer/loading.html"
+# Resolve loading page path with fallbacks so manual updates/relocations
+# do not break kiosk startup.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOADING_HTML="$SCRIPT_DIR/loading.html"
+if [ ! -f "$LOADING_HTML" ] && [ -f "$HOME/stage-timer/loading.html" ]; then
+  LOADING_HTML="$HOME/stage-timer/loading.html"
+fi
+if [ ! -f "$LOADING_HTML" ] && [ -f "$HOME/CuePi/loading.html" ]; then
+  LOADING_HTML="$HOME/CuePi/loading.html"
+fi
+
+if [ -f "$LOADING_HTML" ]; then
+  exec chromium --kiosk --noerrdialogs --disable-infobars --check-for-update-interval=31536000 "file://$LOADING_HTML"
+fi
+
+# Last-resort fallback if loading page is missing.
+exec chromium --kiosk --noerrdialogs --disable-infobars --check-for-update-interval=31536000 "http://localhost:3000/presenter.html"
