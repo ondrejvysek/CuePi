@@ -716,13 +716,13 @@
         function closeTargetModal() { document.getElementById('target-modal').classList.remove('active'); }
 
         function formatCountdownSignedDDHHMMSS(timeLeftSeconds) {
-            const sign = timeLeftSeconds > 0 ? '-' : '+';
             const abs = Math.abs(timeLeftSeconds);
             const days = Math.floor(abs / 86400);
             const hours = Math.floor((abs % 86400) / 3600);
             const mins = Math.floor((abs % 3600) / 60);
             const secs = abs % 60;
-            return `${sign}${days.toString().padStart(2, '0')} ${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            const dayLabel = days === 1 ? 'day' : 'days';
+            return `${days.toString().padStart(2, '0')} ${dayLabel} ${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         }
 
         async function setTargetMode() {
@@ -1172,7 +1172,7 @@
                     activeRundownHintStep = s.currentIndex;
                     lastRundownHintSegment = `${s.currentIndex}:${nextName}`;
 
-                    const nextMessage = nextNote;
+                    const nextMessage = nextNote ? `Up next: ${nextNote}` : '';
                     autoRundownMessageText = nextMessage;
                     autoRundownMessageStep = s.currentIndex;
                     if (document.getElementById('hint-pin-toggle').checked && nextMessage) {
@@ -1224,8 +1224,10 @@
                     }
                     if (s.mode === 'countdown') {
                         if (s.timeLeft <= 0) monitorTime.style.color = presenterColors.overflow;
-                        else if (s.timeLeft <= 120) monitorTime.style.color = presenterColors.warning; 
+                        else if (s.timeLeft <= Math.max(120, getHintThreshold())) monitorTime.style.color = presenterColors.warning; 
                         else monitorTime.style.color = presenterColors.ok;
+                    } else if (s.mode === 'target') {
+                        monitorTime.style.color = s.timeLeft <= 0 ? presenterColors.overflow : presenterColors.ok;
                     } else monitorTime.style.color = presenterColors.ok;
                 }
             }
