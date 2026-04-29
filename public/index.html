@@ -224,6 +224,22 @@
             </div>
         </div>
     </div>
+    <div id="branding-colors-modal" class="modal-overlay">
+        <div class="modal-content" style="width:min(760px,96vw);">
+            <div class="modal-title">
+                BRANDING COLORS
+                <button onclick="closeBrandingColorsModal()" style="background:none; border:none; color:white; font-size:20px; cursor:pointer;">×</button>
+            </div>
+            <div class="sys-group" style="margin-bottom:0;">
+                <h3>Event branding and color config</h3>
+                <p style="font-size:11px; color:var(--text-dim); margin-top:-8px;">Semantic colors (ok/warning/overflow) for timer text, background, and indicator.</p>
+                <div id="branding-color-grid"></div>
+                <div class="sys-row" style="margin-top:10px; margin-bottom:0;">
+                    <button onclick="savePresenterColors()" class="sys-btn" style="width:100%;">SAVE PRESENTER COLORS</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="container">
         <header>
@@ -391,10 +407,9 @@
                     </div>
                     <div class="sys-group" style="margin-top:12px; margin-bottom:0;">
                         <h3>Event branding and color config</h3>
-                        <p style="font-size:11px; color:var(--text-dim); margin-top:-8px;">Semantic colors (ok/warning/overflow) for timer text, background, and indicator.</p>
-                        <div id="branding-color-grid"></div>
-                        <div class="sys-row" style="margin-top:10px; margin-bottom:0;">
-                            <button onclick="savePresenterColors()" class="sys-btn" style="width:100%;">SAVE PRESENTER COLORS</button>
+                        <p style="font-size:11px; color:var(--text-dim); margin-top:-8px;">Open popup to manage timer text, background, and indicator semantic colors.</p>
+                        <div class="sys-row" style="margin-bottom:0;">
+                            <button onclick="openBrandingColorsModal()" class="sys-btn" style="width:100%;">MANAGE COLORS</button>
                         </div>
                     </div>
                 </section>
@@ -546,6 +561,8 @@
 
         function openSettings() { document.getElementById('settings-modal').classList.add('active'); checkAPStatus(); }
         function closeSettings() { document.getElementById('settings-modal').classList.remove('active'); }
+        function openBrandingColorsModal() { document.getElementById('branding-colors-modal').classList.add('active'); }
+        function closeBrandingColorsModal() { document.getElementById('branding-colors-modal').classList.remove('active'); }
         async function confirmRestart() {
             try {
                 await apiPost('/api/system/restart', {});
