@@ -349,7 +349,7 @@ app.get('/presenter.html', (req, res) => {
 });
 app.get('/api/messages', (req, res) => res.json(quickMessages));
 
-app.post('/api/display-config', requireAdmin, (req, res) => {
+app.post('/api/display-config', (req, res) => {
   displayConfig = sanitizeDisplayConfig({ ...displayConfig, ...(req.body || {}) });
   persistDisplayConfig();
   broadcast();

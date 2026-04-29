@@ -434,12 +434,9 @@
             let rundownFlowMode = localStorage.getItem('rundownFlowMode') || 'overflow';
             let v2OnlyMode = false;
             let selectedTargetISO = null;
-            const presenterColorDefaults = {
-                timerText: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
-                background: { ok: '#000000', warning: '#f97316', overflow: '#ef4444' },
-                indicator: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
-            };
-            let presenterColors = JSON.parse(JSON.stringify(presenterColorDefaults));
+            const presenterColorDefaults = { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' };
+            let presenterColors = { ...presenterColorDefaults };
+            const presenterBlackValues = new Set(['#000', '#000000', 'black', 'rgb(0,0,0)', 'rgb(0, 0, 0)']);
 
         // Audio Cues Logic
         let audioEnabled = false;
@@ -678,18 +675,12 @@
         }
 
         function hydratePresenterColorInputs(colors = {}) {
-            const merged = {
-                timerText: { ...presenterColorDefaults.timerText, ...((colors || {}).timerText || {}) },
-                background: { ...presenterColorDefaults.background, ...((colors || {}).background || {}) },
-                indicator: { ...presenterColorDefaults.indicator, ...((colors || {}).indicator || {}) },
-            };
-            presenterColors = merged;
-            Object.entries(merged).forEach(([group, semantic]) => {
-                Object.entries(semantic).forEach(([state, value]) => {
-                    const textEl = document.querySelector(`[data-presenter-color-text="${group}.${state}"]`);
-                    if (textEl) textEl.value = value;
-                });
-            });
+            presenterColors = { ...presenterColorDefaults, ...(colors || {}) };
+            const okRaw = String(presenterColors.ok || '').trim().toLowerCase();
+            if (!okRaw || presenterBlackValues.has(okRaw)) presenterColors.ok = presenterColorDefaults.ok;
+            document.getElementById('presenter-color-ok').value = presenterColors.ok || presenterColorDefaults.ok;
+            document.getElementById('presenter-color-warning').value = presenterColors.warning || presenterColorDefaults.warning;
+            document.getElementById('presenter-color-overflow').value = presenterColors.overflow || presenterColorDefaults.overflow;
             syncPresenterColorPickers();
         }
 
