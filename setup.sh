@@ -9,18 +9,30 @@ echo "================================================="
 # --- CONFIGURATION ---
 REPO_URL="https://github.com/ondrejvysek/cuepi.git"
 CURRENT_USER=$(whoami)
-APP_DIR="$HOME/stage-timer"
+APP_DIR="$HOME/cuepi"
+AP_CONNECTION_NAME="CuePi_Fallback"
+LEGACY_AP_CONNECTION_NAME="StageTimer_Fallback"
+AP_SSID="CuePi_AP"
+SYSTEMD_SERVICE_NAME="cuepi"
+LEGACY_SYSTEMD_SERVICE_NAME="stage-timer"
 
 echo -e "\n[1/7] Updating system and installing dependencies..."
 sudo apt update
 sudo apt install -y git nodejs npm chromium xserver-xorg x11-xserver-utils xinit openbox network-manager fonts-dejavu fonts-liberation fonts-roboto plymouth plymouth-themes imagemagick
 
 echo -e "\n[2/7] Configuring Auto-Fallback Wi-Fi Hotspot..."
-sudo nmcli connection delete "StageTimer_Fallback" 2>/dev/null
-sudo nmcli connection add type wifi ifname wlan0 con-name "StageTimer_Fallback" autoconnect yes ssid StageTimer_AP
-sudo nmcli connection modify "StageTimer_Fallback" 802-11-wireless.mode ap 802-11-wireless.band bg ipv4.method shared
-sudo nmcli connection modify "StageTimer_Fallback" wifi-sec.key-mgmt wpa-psk wifi-sec.psk "stageadmin"
-sudo nmcli connection modify "StageTimer_Fallback" connection.autoconnect-priority -10
+if sudo nmcli -t -f NAME connection show | grep -Fxq "$LEGACY_AP_CONNECTION_NAME"; then
+    echo "Migrating legacy AP connection ($LEGACY_AP_CONNECTION_NAME -> $AP_CONNECTION_NAME)..."
+    sudo nmcli connection modify "$LEGACY_AP_CONNECTION_NAME" connection.id "$AP_CONNECTION_NAME" || true
+fi
+if ! sudo nmcli -t -f NAME connection show | grep -Fxq "$AP_CONNECTION_NAME"; then
+    sudo nmcli connection add type wifi ifname wlan0 con-name "$AP_CONNECTION_NAME" autoconnect yes ssid "$AP_SSID"
+fi
+sudo nmcli connection modify "$AP_CONNECTION_NAME" 802-11-wireless.ssid "$AP_SSID"
+sudo nmcli connection modify "$AP_CONNECTION_NAME" 802-11-wireless.mode ap 802-11-wireless.band bg ipv4.method shared
+sudo nmcli connection modify "$AP_CONNECTION_NAME" wifi-sec.key-mgmt wpa-psk wifi-sec.psk "stageadmin"
+sudo nmcli connection modify "$AP_CONNECTION_NAME" connection.autoconnect-priority -10
+sudo nmcli connection delete "$LEGACY_AP_CONNECTION_NAME" 2>/dev/null || true
 
 echo -e "\n[3/7] Automating OS Autologin..."
 # Enable Console Autologin (Boot option B2)
@@ -42,20 +54,20 @@ chmod +x "$APP_DIR/start-timer.sh"
 
 echo -e "\n[7/7] Setting up Plymouth Boot Splash & Node Service..."
 # Create a seamless boot splash
-THEME_DIR="/usr/share/plymouth/themes/stagetimer"
+THEME_DIR="/usr/share/plymouth/themes/cuepi"
 sudo mkdir -p "$THEME_DIR"
-sudo tee "$THEME_DIR/stagetimer.plymouth" > /dev/null << EOF
+sudo tee "$THEME_DIR/cuepi.plymouth" > /dev/null << EOF
 [Plymouth Theme]
-Name=StageTimer
+Name=CuePi
 Description=CuePi Custom Splash
 ModuleName=script
 
 [script]
 ImageDir=$THEME_DIR
-ScriptFile=$THEME_DIR/stagetimer.script
+ScriptFile=$THEME_DIR/cuepi.script
 EOF
 
-sudo tee "$THEME_DIR/stagetimer.script" > /dev/null << 'EOF'
+sudo tee "$THEME_DIR/cuepi.script" > /dev/null << 'EOF'
 Window.SetBackgroundTopColor(0.0, 0.0, 0.0);
 Window.SetBackgroundBottomColor(0.0, 0.0, 0.0);
 
@@ -65,17 +77,20 @@ logo.sprite.SetX(Window.GetWidth() / 2 - logo.image.GetWidth() / 2);
 logo.sprite.SetY(Window.GetHeight() / 2 - logo.image.GetHeight() / 2);
 EOF
 
-# Copy the custom splash logo directly from the Git repository
-if [ -f "$APP_DIR/splash.png" ]; then
+# Copy the custom splash logo from the CuePi asset path.
+if [ -f "$APP_DIR/assets/CuePi-splash.png" ]; then
+    sudo cp "$APP_DIR/assets/CuePi-splash.png" "$THEME_DIR/splash.png"
+    echo "CuePi splash screen logo applied from assets/CuePi-splash.png."
+elif [ -f "$APP_DIR/splash.png" ]; then
     sudo cp "$APP_DIR/splash.png" "$THEME_DIR/splash.png"
-    echo "Custom splash screen logo applied from repository."
+    echo "Legacy splash.png detected and applied for backwards compatibility."
 else
-    # Fallback to black if no image is found in git
-    echo "No splash.png found in repository. Creating empty fallback."
+    # Fallback to black if no image is found
+    echo "No CuePi splash image found in repository. Creating empty fallback."
     sudo convert -size 800x600 xc:black "$THEME_DIR/splash.png"
 fi
 
-sudo plymouth-set-default-theme -R stagetimer
+sudo plymouth-set-default-theme -R cuepi
 
 # Hide Linux boot text - Bulletproof cmdline.txt handling
 CMDLINE_FILES=("/boot/firmware/cmdline.txt" "/boot/cmdline.txt")
@@ -97,7 +112,7 @@ for CMDLINE in "${CMDLINE_FILES[@]}"; do
 done
 
 # Create the Node.js Server Service
-sudo tee /etc/systemd/system/stage-timer.service > /dev/null << EOF
+sudo tee /etc/systemd/system/${SYSTEMD_SERVICE_NAME}.service > /dev/null << EOF
 [Unit]
 Description=CuePi Node Server
 After=network.target
@@ -115,8 +130,12 @@ WantedBy=multi-user.target
 EOF
 
 sudo systemctl daemon-reload
-sudo systemctl enable stage-timer
-sudo systemctl start stage-timer
+if [ -f "/etc/systemd/system/${LEGACY_SYSTEMD_SERVICE_NAME}.service" ]; then
+    sudo systemctl disable "$LEGACY_SYSTEMD_SERVICE_NAME" 2>/dev/null || true
+fi
+sudo ln -sf "/etc/systemd/system/${SYSTEMD_SERVICE_NAME}.service" "/etc/systemd/system/${LEGACY_SYSTEMD_SERVICE_NAME}.service"
+sudo systemctl enable "$SYSTEMD_SERVICE_NAME"
+sudo systemctl restart "$SYSTEMD_SERVICE_NAME"
 
 # Bind the Kiosk launch to the physical HDMI console autologin using X11
 echo '[[ -z $DISPLAY && $XDG_VTNR -eq 1 ]] && exec startx "'$APP_DIR'/start-timer.sh" -- -nocursor' > "$HOME/.bash_profile"
