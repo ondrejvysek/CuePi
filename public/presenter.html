@@ -10,9 +10,10 @@
         
         :root {
             --bg: #000000;
-            --text: #22c55e;
-            --warn: #f97316;
-            --danger: #ef4444;
+            --ok: #22c55e;
+            --warning: #f97316;
+            --overflow: #ef4444;
+            --text: var(--ok);
         }
 
         *, html, body { cursor: none !important; user-select: none; }
@@ -67,11 +68,11 @@
         #progress-container { position: absolute; bottom: 0; left: 0; width: 100%; height: 2vh; background: rgba(255,255,255,0.1); }
         #progress-bar { height: 100%; background: #22c55e; width: 100%; transition: width 1s linear, background-color 1s linear; }
 
-        body.state-warn { background-color: var(--warn); color: white; }
+        body.state-warning { background-color: var(--warning); color: white; }
         
         /* Removed heavy box-shadow animation to prevent lag. Uses standard solid background color now. */
-        body.state-danger { 
-            background-color: var(--danger); 
+        body.state-overflow { 
+            background-color: var(--overflow); 
             color: white; 
         }
 
@@ -105,6 +106,30 @@
 
         let currentMode = 'countdown';
         let localTimeInterval = null;
+        const defaultPresenterColors = {
+            timerText: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
+            background: { ok: '#000000', warning: '#f97316', overflow: '#ef4444' },
+            indicator: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
+        };
+
+        function getSemanticState(mode, timeLeft) {
+            if (!['countdown', 'countup', 'target'].includes(mode)) return 'ok';
+            if (timeLeft <= 0) return 'overflow';
+            if ((mode === 'countdown' || mode === 'target') && timeLeft <= 120) return 'warning';
+            return 'ok';
+        }
+
+        function applyPresenterColors(colors) {
+            const next = {
+                timerText: { ...defaultPresenterColors.timerText, ...((colors || {}).timerText || {}) },
+                background: { ...defaultPresenterColors.background, ...((colors || {}).background || {}) },
+                indicator: { ...defaultPresenterColors.indicator, ...((colors || {}).indicator || {}) },
+            };
+            document.documentElement.style.setProperty('--ok', next.background.ok);
+            document.documentElement.style.setProperty('--warning', next.background.warning);
+            document.documentElement.style.setProperty('--overflow', next.background.overflow);
+            return next;
+        }
 
         function formatCountdownSignedDDHHMMSS(timeLeftSeconds) {
             const sign = timeLeftSeconds > 0 ? '-' : '+';
@@ -118,13 +143,17 @@
 
         socket.on('stateUpdate', (state) => {
             currentMode = state.mode;
+            const semanticColors = applyPresenterColors(state.presenterColors);
+            const semanticState = getSemanticState(state.mode, state.timeLeft);
 
             if (state.ip && !ipOverlay.dataset.hidden) {
                 ipOverlay.innerText = "IP: " + state.ip;
                 setTimeout(() => { ipOverlay.style.display = 'none'; ipOverlay.dataset.hidden = 'true'; }, 15000);
             }
 
-            document.body.className = '';
+            document.body.classList.remove('state-warning', 'state-overflow');
+            document.body.style.color = semanticColors.timerText.ok;
+            document.body.style.backgroundColor = semanticColors.background.ok;
 
             if (state.mode === 'timeofday') {
                 logoDisplay.style.display = 'none';
@@ -178,19 +207,25 @@
                 if (fontSizeVw > 28) fontSizeVw = 28;
                 clock.style.fontSize = fontSizeVw + "vw";
 
-                if (state.mode === 'countdown') {
-                    if (state.timeLeft <= 0) document.body.classList.add('state-danger');
-                    else if (state.timeLeft <= 120) document.body.classList.add('state-warn');
-                }
+                if (semanticState === 'overflow') document.body.classList.add('state-overflow');
+                else if (semanticState === 'warning') document.body.classList.add('state-warning');
+                else document.body.style.color = semanticColors.timerText.ok;
 
                 if (state.mode === 'countdown') {
                     const progress = state.timeLeft <= 0 ? 0 : (state.timeLeft / state.initialTime) * 100;
                     progressBar.style.width = `${progress}%`;
-                    const hue = Math.max(0, (progress / 100) * 120);
-                    progressBar.style.backgroundColor = `hsl(${hue}, 80%, 50%)`;
+                    progressBar.style.backgroundColor = semanticState === 'overflow'
+                        ? semanticColors.indicator.overflow
+                        : semanticState === 'warning'
+                            ? semanticColors.indicator.warning
+                            : semanticColors.indicator.ok;
                 } else {
                     progressBar.style.width = '100%';
-                    progressBar.style.backgroundColor = 'var(--text)';
+                    progressBar.style.backgroundColor = semanticState === 'overflow'
+                        ? semanticColors.indicator.overflow
+                        : semanticState === 'warning'
+                            ? semanticColors.indicator.warning
+                            : semanticColors.indicator.ok;
                 }
             }
 
