@@ -43,13 +43,13 @@
 
         function checkServer() {
             fetch('http://localhost:3000/api/state')
-                .then(async (response) => {
+                .then((response) => {
                     if (!response.ok) {
                         setTimeout(checkServer, 1000);
                         return;
                     }
-                    const presenterUrl = await resolvePresenterUrl();
-                    window.location.replace(presenterUrl);
+                    const apiOrigin = new URL(response.url).origin;
+                    window.location.replace(`${apiOrigin}/presenter.html`);
                 })
                 .catch(() => setTimeout(checkServer, 1000));
         }
