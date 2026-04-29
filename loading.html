@@ -24,6 +24,23 @@
         .text { animation: pulse 2s infinite; }
     </style>
     <script>
+        async function resolvePresenterUrl() {
+            const candidates = [
+                'http://localhost:3000/presenter.html',
+                'http://127.0.0.1:3000/presenter.html',
+                'http://localhost:3000/public/presenter.html'
+            ];
+
+            for (const candidate of candidates) {
+                try {
+                    const check = await fetch(candidate, { method: 'HEAD' });
+                    if (check.ok) return candidate;
+                } catch (_) {}
+            }
+
+            return candidates[0];
+        }
+
         function checkServer() {
             fetch('http://localhost:3000/api/state')
                 .then((response) => {
