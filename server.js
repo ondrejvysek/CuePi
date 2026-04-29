@@ -26,6 +26,11 @@ const DEFAULT_PRESENTER_COLOR_GROUPS = {
   background: { ...DEFAULT_PRESENTER_COLORS },
   indicator: { ...DEFAULT_PRESENTER_COLORS },
 };
+const DEFAULT_PRESENTER_COLOR_GROUPS = {
+  text: { ...DEFAULT_PRESENTER_COLORS },
+  background: { ...DEFAULT_PRESENTER_COLORS },
+  indicator: { ...DEFAULT_PRESENTER_COLORS },
+};
 
 if (!bootData.config.uuid) {
   bootData.config.uuid = crypto.randomUUID();
@@ -357,10 +362,15 @@ app.get('/presenter.html', (req, res) => {
 app.get('/api/messages', (req, res) => res.json(quickMessages));
 
 app.post('/api/display-config', (req, res) => {
-  displayConfig = sanitizeDisplayConfig({ ...displayConfig, ...(req.body || {}) });
-  persistDisplayConfig();
-  broadcast();
-  res.json({ ok: true, displayConfig });
+  try {
+    displayConfig = sanitizeDisplayConfig({ ...displayConfig, ...(req.body || {}) });
+    persistDisplayConfig();
+    broadcast();
+    res.json({ ok: true, displayConfig });
+  } catch (error) {
+    console.error('Display config save failed:', error);
+    structuredError(res, 500, 'Display config save failed', String(error?.message || error));
+  }
 });
 
 app.post('/api/start', (req, res) => {
