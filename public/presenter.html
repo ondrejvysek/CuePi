@@ -115,7 +115,7 @@
         function getSemanticState(mode, timeLeft) {
             if (!['countdown', 'countup', 'target'].includes(mode)) return 'ok';
             if (timeLeft <= 0) return 'overflow';
-            if ((mode === 'countdown' || mode === 'target') && timeLeft <= 120) return 'warning';
+            if (mode === 'countdown' && timeLeft <= 120) return 'warning';
             return 'ok';
         }
 

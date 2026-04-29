@@ -1278,10 +1278,12 @@
                         monitorTime.innerText = (s.timeLeft < 0 ? "-" : "") + Math.floor(abs/60).toString().padStart(2,'0') + ":" + (abs%60).toString().padStart(2,'0');
                     }
                     if (s.mode === 'countdown') {
-                        if (s.timeLeft <= 0) monitorTime.style.color = presenterColors.timerText.overflow;
-                        else if (s.timeLeft <= 120) monitorTime.style.color = presenterColors.timerText.warning; 
-                        else monitorTime.style.color = presenterColors.timerText.ok;
-                    } else monitorTime.style.color = presenterColors.timerText.ok;
+                        if (s.timeLeft <= 0) monitorTime.style.color = presenterColors.overflow;
+                        else if (s.timeLeft <= Math.max(120, getHintThreshold())) monitorTime.style.color = presenterColors.warning; 
+                        else monitorTime.style.color = presenterColors.ok;
+                    } else if (s.mode === 'target') {
+                        monitorTime.style.color = s.timeLeft <= 0 ? presenterColors.overflow : presenterColors.ok;
+                    } else monitorTime.style.color = presenterColors.ok;
                 }
             }
             

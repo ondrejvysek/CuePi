@@ -24,21 +24,34 @@
         .text { animation: pulse 2s infinite; }
     </style>
     <script>
+        async function resolvePresenterUrl() {
+            const candidates = [
+                'http://localhost:3000/presenter.html',
+                'http://127.0.0.1:3000/presenter.html',
+                'http://localhost:3000/public/presenter.html'
+            ];
+
+            for (const candidate of candidates) {
+                try {
+                    const check = await fetch(candidate, { method: 'HEAD' });
+                    if (check.ok) return candidate;
+                } catch (_) {}
+            }
+
+            return candidates[0];
+        }
+
         function checkServer() {
-            // Ping the Node API. The server.js now has CORS enabled to allow this.
             fetch('http://localhost:3000/api/state')
-                .then(response => {
-                    if (response.ok) {
-                        // Node is up! Redirect to the real presenter view
-                        window.location.replace('http://localhost:3000/presenter.html');
-                    } else {
+                .then(async (response) => {
+                    if (!response.ok) {
                         setTimeout(checkServer, 1000);
+                        return;
                     }
+                    const presenterUrl = await resolvePresenterUrl();
+                    window.location.replace(presenterUrl);
                 })
-                .catch(() => {
-                    // Server is still booting, try again in 1 second
-                    setTimeout(checkServer, 1000);
-                });
+                .catch(() => setTimeout(checkServer, 1000));
         }
         // Start polling 1 second after launch
         setTimeout(checkServer, 1000);
