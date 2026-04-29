@@ -107,16 +107,32 @@
         let currentMode = 'countdown';
         let localTimeInterval = null;
         const defaultPresenterColors = { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' };
+        const blackValues = new Set(['#000', '#000000', 'black', 'rgb(0,0,0)', 'rgb(0, 0, 0)']);
+        function getPresenterTextColors(colors = {}) {
+            if (colors && typeof colors === 'object' && colors.text && typeof colors.text === 'object') {
+                return colors.text;
+            }
+            return colors;
+        }
+
+        function normalizePresenterColors(colors) {
+            const textColors = getPresenterTextColors(colors || {});
+            const next = { ...defaultPresenterColors, ...(textColors || {}) };
+            const okRaw = String(next.ok || '').trim().toLowerCase();
+            if (!okRaw || blackValues.has(okRaw)) next.ok = defaultPresenterColors.ok;
+            return next;
+        }
 
         function getSemanticState(mode, timeLeft) {
-            if (!['countdown', 'countup', 'target'].includes(mode)) return 'ok';
+            if (mode === 'target') return timeLeft <= 0 ? 'overflow' : 'ok';
+            if (mode !== 'countdown') return 'ok';
             if (timeLeft <= 0) return 'overflow';
-            if ((mode === 'countdown' || mode === 'target') && timeLeft <= 120) return 'warning';
+            if (mode === 'countdown' && timeLeft <= 120) return 'warning';
             return 'ok';
         }
 
         function applyPresenterColors(colors) {
-            const next = { ...defaultPresenterColors, ...(colors || {}) };
+            const next = normalizePresenterColors(colors);
             document.documentElement.style.setProperty('--ok', next.ok);
             document.documentElement.style.setProperty('--warning', next.warning);
             document.documentElement.style.setProperty('--overflow', next.overflow);
@@ -124,13 +140,13 @@
         }
 
         function formatCountdownSignedDDHHMMSS(timeLeftSeconds) {
-            const sign = timeLeftSeconds > 0 ? '-' : '+';
             const abs = Math.abs(timeLeftSeconds);
             const days = Math.floor(abs / 86400);
             const hours = Math.floor((abs % 86400) / 3600);
             const mins = Math.floor((abs % 3600) / 60);
             const secs = abs % 60;
-            return `${sign}${days.toString().padStart(2, '0')} ${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            const dayLabel = days === 1 ? 'day' : 'days';
+            return `${days.toString().padStart(2, '0')} ${dayLabel} ${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         }
 
         socket.on('stateUpdate', (state) => {
@@ -144,12 +160,14 @@
             }
 
             document.body.classList.remove('state-warning', 'state-overflow');
-            document.body.style.color = semanticColors.ok;
-            document.body.style.backgroundColor = '#000000';
+            document.body.style.color = '';
+            document.body.style.backgroundColor = '';
 
             if (state.mode === 'timeofday') {
                 logoDisplay.style.display = 'none';
                 document.getElementById('clock-container').style.display = 'flex';
+                clock.style.opacity = '1';
+                clock.style.color = semanticColors.ok;
                 if (!localTimeInterval) {
                     localTimeInterval = setInterval(() => {
                         if(currentMode === 'timeofday') {
@@ -175,7 +193,8 @@
                     document.getElementById('clock-container').style.display = 'flex';
                     clock.innerText = "EVENT LOGO";
                     clock.style.fontSize = "12vw";
-                    clock.style.opacity = "0.5";
+                    clock.style.opacity = "1";
+                    clock.style.color = semanticColors.ok;
                 }
                 document.getElementById('progress-container').style.display = 'none';
 
@@ -198,10 +217,18 @@
                 let fontSizeVw = 84 / (charCount * 0.6);
                 if (fontSizeVw > 28) fontSizeVw = 28;
                 clock.style.fontSize = fontSizeVw + "vw";
+                clock.style.color = semanticColors[semanticState] || semanticColors.ok;
+                clock.style.textShadow = semanticState === 'ok' ? 'none' : '0 0 16px rgba(0,0,0,0.35)';
 
-                if (semanticState === 'overflow') document.body.classList.add('state-overflow');
-                else if (semanticState === 'warning') document.body.classList.add('state-warning');
-                else document.body.style.color = semanticColors.ok;
+                if (semanticState === 'overflow') {
+                    document.body.style.backgroundColor = semanticColors.overflow;
+                    clock.style.color = '#ffffff';
+                } else if (semanticState === 'warning') {
+                    document.body.style.backgroundColor = semanticColors.warning;
+                    clock.style.color = '#ffffff';
+                } else {
+                    document.body.style.backgroundColor = '#000000';
+                }
 
                 if (state.mode === 'countdown') {
                     const progress = state.timeLeft <= 0 ? 0 : (state.timeLeft / state.initialTime) * 100;
