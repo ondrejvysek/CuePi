@@ -113,7 +113,8 @@
         };
 
         function getSemanticState(mode, timeLeft) {
-            if (!['countdown', 'countup', 'target'].includes(mode)) return 'ok';
+            if (mode === 'target') return timeLeft <= 0 ? 'overflow' : 'ok';
+            if (mode !== 'countdown') return 'ok';
             if (timeLeft <= 0) return 'overflow';
             if (mode === 'countdown' && timeLeft <= 120) return 'warning';
             return 'ok';
@@ -158,6 +159,7 @@
             if (state.mode === 'timeofday') {
                 logoDisplay.style.display = 'none';
                 document.getElementById('clock-container').style.display = 'flex';
+                clock.style.opacity = '1';
                 if (!localTimeInterval) {
                     localTimeInterval = setInterval(() => {
                         if(currentMode === 'timeofday') {
@@ -183,7 +185,7 @@
                     document.getElementById('clock-container').style.display = 'flex';
                     clock.innerText = "EVENT LOGO";
                     clock.style.fontSize = "12vw";
-                    clock.style.opacity = "0.5";
+                    clock.style.opacity = "1";
                 }
                 document.getElementById('progress-container').style.display = 'none';
 
@@ -209,6 +211,10 @@
 
                 if (semanticState === 'overflow') {
                     document.body.style.backgroundColor = semanticColors.overflow;
+                    document.body.style.color = semanticColors.overflow;
+                } else if (semanticState === 'warning') {
+                    document.body.style.backgroundColor = semanticColors.warning;
+                    document.body.style.color = semanticColors.warning;
                     document.body.style.color = '#ffffff';
                 } else if (semanticState === 'warning') {
                     document.body.style.backgroundColor = semanticColors.warning;
