@@ -25,20 +25,16 @@
     </style>
     <script>
         function checkServer() {
-            // Ping the Node API. The server.js now has CORS enabled to allow this.
             fetch('http://localhost:3000/api/state')
-                .then(response => {
-                    if (response.ok) {
-                        // Node is up! Redirect to the real presenter view
-                        window.location.replace('http://localhost:3000/presenter.html');
-                    } else {
+                .then((response) => {
+                    if (!response.ok) {
                         setTimeout(checkServer, 1000);
+                        return;
                     }
+                    const apiOrigin = new URL(response.url).origin;
+                    window.location.replace(`${apiOrigin}/presenter.html`);
                 })
-                .catch(() => {
-                    // Server is still booting, try again in 1 second
-                    setTimeout(checkServer, 1000);
-                });
+                .catch(() => setTimeout(checkServer, 1000));
         }
         // Start polling 1 second after launch
         setTimeout(checkServer, 1000);
