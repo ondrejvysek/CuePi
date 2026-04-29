@@ -106,11 +106,15 @@
 
         let currentMode = 'countdown';
         let localTimeInterval = null;
-        const defaultPresenterColors = {
-            timerText: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
-            background: { ok: '#000000', warning: '#f97316', overflow: '#ef4444' },
-            indicator: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
-        };
+        const defaultPresenterColors = { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' };
+        const blackValues = new Set(['#000', '#000000', 'black', 'rgb(0,0,0)', 'rgb(0, 0, 0)']);
+
+        function normalizePresenterColors(colors) {
+            const next = { ...defaultPresenterColors, ...(colors || {}) };
+            const okRaw = String(next.ok || '').trim().toLowerCase();
+            if (!okRaw || blackValues.has(okRaw)) next.ok = defaultPresenterColors.ok;
+            return next;
+        }
 
         function getSemanticState(mode, timeLeft) {
             if (mode === 'target') return timeLeft <= 0 ? 'overflow' : 'ok';
@@ -121,14 +125,10 @@
         }
 
         function applyPresenterColors(colors) {
-            const next = {
-                timerText: { ...defaultPresenterColors.timerText, ...((colors || {}).timerText || {}) },
-                background: { ...defaultPresenterColors.background, ...((colors || {}).background || {}) },
-                indicator: { ...defaultPresenterColors.indicator, ...((colors || {}).indicator || {}) },
-            };
-            document.documentElement.style.setProperty('--ok', next.background.ok);
-            document.documentElement.style.setProperty('--warning', next.background.warning);
-            document.documentElement.style.setProperty('--overflow', next.background.overflow);
+            const next = normalizePresenterColors(colors);
+            document.documentElement.style.setProperty('--ok', next.ok);
+            document.documentElement.style.setProperty('--warning', next.warning);
+            document.documentElement.style.setProperty('--overflow', next.overflow);
             return next;
         }
 
