@@ -22,42 +22,56 @@
             50% { opacity: 0.3; } 
         }
         .text { animation: pulse 2s infinite; }
+        .diag {
+            position: fixed;
+            left: 24px;
+            right: 24px;
+            bottom: 24px;
+            font-size: 1.6vw;
+            color: #93c5fd;
+            font-family: monospace;
+            text-align: center;
+            opacity: 0.9;
+        }
     </style>
     <script>
-        async function resolvePresenterUrl() {
-            const candidates = [
-                'http://localhost:3000/presenter.html',
-                'http://127.0.0.1:3000/presenter.html',
-                'http://localhost:3000/public/presenter.html'
-            ];
+        function setBootDiag(text) {
+            const el = document.getElementById('boot-diag');
+            if (el) el.innerText = text;
+        }
 
-            for (const candidate of candidates) {
+        async function probeApiOrigins() {
+            const candidates = ['http://localhost:3000', 'http://127.0.0.1:3000'];
+            for (const origin of candidates) {
                 try {
-                    const check = await fetch(candidate, { method: 'HEAD' });
-                    if (check.ok) return candidate;
+                    setBootDiag(`Checking API: ${origin}/api/state`);
+                    const response = await fetch(`${origin}/api/state`);
+                    if (response.ok) {
+                        setBootDiag(`API online at ${origin}`);
+                        return origin;
+                    }
                 } catch (_) {}
             }
-
-            return candidates[0];
+            setBootDiag('API not reachable yet. Retrying...');
+            return null;
         }
 
-        function checkServer() {
-            fetch('http://localhost:3000/api/state')
-                .then((response) => {
-                    if (!response.ok) {
-                        setTimeout(checkServer, 1000);
-                        return;
-                    }
-                    const apiOrigin = new URL(response.url).origin;
-                    window.location.replace(`${apiOrigin}/presenter.html`);
-                })
-                .catch(() => setTimeout(checkServer, 1000));
+        async function checkServer() {
+            const apiOrigin = await probeApiOrigins();
+            if (!apiOrigin) {
+                setTimeout(checkServer, 1000);
+                return;
+            }
+            setBootDiag(`Launching presenter: ${apiOrigin}/presenter.html`);
+            window.location.replace(`${apiOrigin}/presenter.html`);
         }
         // Start polling 1 second after launch
+        setBootDiag('Initializing boot checks...');
         setTimeout(checkServer, 1000);
     </script>
 </head>
 <body>
     <div class="text">INITIALIZING CUEPI...</div>
+    <div id="boot-diag" class="diag">Starting...</div>
 </body>
 </html>
