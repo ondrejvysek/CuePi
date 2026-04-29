@@ -685,9 +685,12 @@
             presenterColors = { ...presenterColorDefaults, ...(textColors || {}) };
             const okRaw = String(presenterColors.ok || '').trim().toLowerCase();
             if (!okRaw || presenterBlackValues.has(okRaw)) presenterColors.ok = presenterColorDefaults.ok;
-            document.getElementById('presenter-color-ok').value = presenterColors.ok || presenterColorDefaults.ok;
-            document.getElementById('presenter-color-warning').value = presenterColors.warning || presenterColorDefaults.warning;
-            document.getElementById('presenter-color-overflow').value = presenterColors.overflow || presenterColorDefaults.overflow;
+            const okEl = document.getElementById('presenter-color-ok');
+            const warnEl = document.getElementById('presenter-color-warning');
+            const overEl = document.getElementById('presenter-color-overflow');
+            if (okEl) okEl.value = presenterColors.ok || presenterColorDefaults.ok;
+            if (warnEl) warnEl.value = presenterColors.warning || presenterColorDefaults.warning;
+            if (overEl) overEl.value = presenterColors.overflow || presenterColorDefaults.overflow;
             syncPresenterColorPickers();
         }
 
@@ -732,23 +735,14 @@
         }
 
         async function savePresenterColors() {
+            const okEl = document.getElementById('presenter-color-ok');
+            const warnEl = document.getElementById('presenter-color-warning');
+            const overEl = document.getElementById('presenter-color-overflow');
             const payload = {
                 presenterColors: {
-                    timerText: {
-                        ok: document.querySelector('[data-presenter-color-text="timerText.ok"]').value.trim(),
-                        warning: document.querySelector('[data-presenter-color-text="timerText.warning"]').value.trim(),
-                        overflow: document.querySelector('[data-presenter-color-text="timerText.overflow"]').value.trim(),
-                    },
-                    background: {
-                        ok: document.querySelector('[data-presenter-color-text="background.ok"]').value.trim(),
-                        warning: document.querySelector('[data-presenter-color-text="background.warning"]').value.trim(),
-                        overflow: document.querySelector('[data-presenter-color-text="background.overflow"]').value.trim(),
-                    },
-                    indicator: {
-                        ok: document.querySelector('[data-presenter-color-text="indicator.ok"]').value.trim(),
-                        warning: document.querySelector('[data-presenter-color-text="indicator.warning"]').value.trim(),
-                        overflow: document.querySelector('[data-presenter-color-text="indicator.overflow"]').value.trim(),
-                    },
+                    ok: String(okEl?.value || presenterColorDefaults.ok).trim(),
+                    warning: String(warnEl?.value || presenterColorDefaults.warning).trim(),
+                    overflow: String(overEl?.value || presenterColorDefaults.overflow).trim(),
                 },
             };
             try {
