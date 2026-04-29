@@ -227,17 +227,17 @@
                     const progress = state.timeLeft <= 0 ? 0 : (state.timeLeft / state.initialTime) * 100;
                     progressBar.style.width = `${progress}%`;
                     progressBar.style.backgroundColor = semanticState === 'overflow'
-                        ? semanticColors.overflow
+                        ? semanticColors.indicator.overflow
                         : semanticState === 'warning'
-                            ? semanticColors.warning
-                            : semanticColors.ok;
+                            ? semanticColors.indicator.warning
+                            : semanticColors.indicator.ok;
                 } else {
                     progressBar.style.width = '100%';
                     progressBar.style.backgroundColor = semanticState === 'overflow'
-                        ? semanticColors.overflow
+                        ? semanticColors.indicator.overflow
                         : semanticState === 'warning'
-                            ? semanticColors.warning
-                            : semanticColors.ok;
+                            ? semanticColors.indicator.warning
+                            : semanticColors.indicator.ok;
                 }
             }
 
