@@ -106,7 +106,11 @@
 
         let currentMode = 'countdown';
         let localTimeInterval = null;
-        const defaultPresenterColors = { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' };
+        const defaultPresenterColors = {
+            timerText: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
+            background: { ok: '#000000', warning: '#f97316', overflow: '#ef4444' },
+            indicator: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
+        };
 
         function getSemanticState(mode, timeLeft) {
             if (mode === 'target') return timeLeft <= 0 ? 'overflow' : 'ok';
@@ -117,10 +121,14 @@
         }
 
         function applyPresenterColors(colors) {
-            const next = { ...defaultPresenterColors, ...(colors || {}) };
-            document.documentElement.style.setProperty('--ok', next.ok);
-            document.documentElement.style.setProperty('--warning', next.warning);
-            document.documentElement.style.setProperty('--overflow', next.overflow);
+            const next = {
+                timerText: { ...defaultPresenterColors.timerText, ...((colors || {}).timerText || {}) },
+                background: { ...defaultPresenterColors.background, ...((colors || {}).background || {}) },
+                indicator: { ...defaultPresenterColors.indicator, ...((colors || {}).indicator || {}) },
+            };
+            document.documentElement.style.setProperty('--ok', next.background.ok);
+            document.documentElement.style.setProperty('--warning', next.background.warning);
+            document.documentElement.style.setProperty('--overflow', next.background.overflow);
             return next;
         }
 
@@ -207,6 +215,10 @@
                 } else if (semanticState === 'warning') {
                     document.body.style.backgroundColor = semanticColors.warning;
                     document.body.style.color = semanticColors.warning;
+                    document.body.style.color = '#ffffff';
+                } else if (semanticState === 'warning') {
+                    document.body.style.backgroundColor = semanticColors.warning;
+                    document.body.style.color = '#ffffff';
                 } else {
                     document.body.style.backgroundColor = '#000000';
                     document.body.style.color = semanticColors.ok;
@@ -216,17 +228,17 @@
                     const progress = state.timeLeft <= 0 ? 0 : (state.timeLeft / state.initialTime) * 100;
                     progressBar.style.width = `${progress}%`;
                     progressBar.style.backgroundColor = semanticState === 'overflow'
-                        ? semanticColors.overflow
+                        ? semanticColors.indicator.overflow
                         : semanticState === 'warning'
-                            ? semanticColors.warning
-                            : semanticColors.ok;
+                            ? semanticColors.indicator.warning
+                            : semanticColors.indicator.ok;
                 } else {
                     progressBar.style.width = '100%';
                     progressBar.style.backgroundColor = semanticState === 'overflow'
-                        ? semanticColors.overflow
+                        ? semanticColors.indicator.overflow
                         : semanticState === 'warning'
-                            ? semanticColors.warning
-                            : semanticColors.ok;
+                            ? semanticColors.indicator.warning
+                            : semanticColors.indicator.ok;
                 }
             }
 
