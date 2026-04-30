@@ -330,3 +330,13 @@ Module isn't showing up: Ensure the copy command in Step 2 worked correctly, and
 ### Companion Stream Deck module
 
 <img width="755" height="702" alt="image" src="https://github.com/user-attachments/assets/5bf03473-2082-4e8f-b83c-5cde8dafc2c7" />
+
+## Backend Module Map
+- `server.js`: composition root (Express/bootstrap/wiring).
+- `backend/lib/api-auth.js`: token auth + legacy route compatibility wrapper.
+- `backend/lib/hardware.js`: system command wrappers and hardware/network operations.
+- `backend/lib/logger.js`: CSV actuals logging helpers and logging-safe wrappers.
+- `backend/lib/routes/timer.js`: timer-focused route handlers (v2 extraction scaffold).
+- `backend/lib/routes/rundown.js`: rundown-focused route handlers (v2 extraction scaffold).
+- `backend/lib/routes/display.js`: display config route handlers (v2 extraction scaffold).
+- `backend/lib/routes/system.js`: system management route handlers (v2 extraction scaffold).
