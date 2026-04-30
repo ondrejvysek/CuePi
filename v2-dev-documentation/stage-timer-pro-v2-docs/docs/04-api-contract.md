@@ -305,3 +305,52 @@ POST /api/system/network/hostname
 POST /api/system/network/wifi
 POST /api/system/network/static-ip
 ```
+
+## System profile export, import, and reset
+
+### `GET /api/system/export`
+
+Admin only. Returns a versioned full snapshot payload for migration/backup.
+
+```json
+{
+  "version": "cuepi-config-v1",
+  "exportedAt": "2026-04-30T10:00:00.000Z",
+  "config": {},
+  "state": {},
+  "display": {},
+  "rundown": [],
+  "integrationMappings": {}
+}
+```
+
+Notes:
+- `integrationMappings` is included only when an integration mapping file exists.
+- Clients must preserve unknown keys for forward compatibility.
+
+### `POST /api/system/import`
+
+Admin only. Imports a full snapshot payload.
+
+Validation and migration rules:
+1. The payload `version` must exactly match `cuepi-config-v1`.
+2. The full payload is validated **before any file is modified**.
+3. On first schema/version mismatch, the request fails and no disk writes occur.
+4. Writes are staged to temp files for all target JSON files and committed atomically.
+
+### `POST /api/system/factory-reset`
+
+Admin only. Requires explicit confirmation token.
+
+Body.
+
+```json
+{
+  "confirm": "RESET_CUEPI"
+}
+```
+
+Reset behavior:
+1. Creates a timestamped pre-reset backup in `data/backups/`.
+2. Restores data files to defaults.
+3. Restarts the runtime service using `CUEPI_SERVICE_NAME` (default `cuepi`).
