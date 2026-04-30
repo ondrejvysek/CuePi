@@ -924,7 +924,7 @@
             await triggerTargetCountdown();
         }
 
-        async function triggerTargetCountdown() {
+        async function triggerTargetCountdown(skipValidation = false) {
             if (!selectedTargetISO) return alert('Select date/time first');
             try {
                 await apiPost('/api/mode', { set: 'target', targetISO: selectedTargetISO, targetRepeatSeconds: 0, targetPreset: targetModePreset });
