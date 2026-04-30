@@ -257,9 +257,9 @@
                 <h3>Event branding and color config</h3>
                 <p style="font-size:11px; color:var(--text-dim); margin-top:-8px;">Semantic colors (ok/warning/overflow) for timer text, background, and indicator.</p>
                 <div id="branding-color-grid"></div>
-                <div class="sys-row" style="margin-top:10px; margin-bottom:0;">
-                    <button onclick="loadPresenterColorDefaults()" class="sys-btn" style="width:100%; background:#334155; margin-bottom:8px;">LOAD DEFAULT COLORS</button>
-                    <button onclick="savePresenterColors()" class="sys-btn" style="width:100%;">SAVE PRESENTER COLORS</button>
+                <div class="sys-row" style="margin-top:10px; margin-bottom:0; gap:10px; align-items:stretch;">
+                    <button onclick="loadPresenterColorDefaults()" class="sys-btn" style="flex:1; background:#334155;">LOAD DEFAULT COLORS</button>
+                    <button onclick="savePresenterColors()" class="sys-btn" style="flex:1;">SAVE PRESENTER COLORS</button>
                 </div>
             </div>
         </div>
@@ -735,7 +735,7 @@
             const container = document.getElementById('branding-color-grid');
             if (!container || container.dataset.ready === '1') return;
             const groups = [
-                ['timerText', 'Timer Text'],
+                ['text', 'Timer Text'],
                 ['background', 'Background'],
                 ['indicator', 'Indicator'],
             ];
@@ -797,7 +797,7 @@
                 const res = await apiPost('/api/display-config', payload);
                 const data = await res.json();
                 hydratePresenterColorInputs((data.displayConfig || {}).presenterColors);
-                alert('Presenter colors saved.');
+                closeBrandingColorsModal();
             } catch (error) {
                 alert(`Save failed: ${error.message}`);
             }
