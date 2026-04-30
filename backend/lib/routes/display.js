@@ -1,9 +1,11 @@
 function registerDisplayRoutes(app, ctx) {
-  const { sanitizeDisplayConfig, persistDisplayConfig, broadcast, structuredError } = ctx;
+  const { sanitizeDisplayConfig, persistDisplayConfig, broadcast, structuredError, validateDisplayConfigPayload, badRequest } = ctx;
 
   app.get('/api/display-config', (req, res) => res.json(ctx.getDisplayConfig()));
   app.post('/api/display-config', (req, res) => {
     try {
+      const validation = validateDisplayConfigPayload(req.body || {});
+      if (!validation.ok) return badRequest(res, validation.details);
       const next = sanitizeDisplayConfig({ ...ctx.getDisplayConfig(), ...(req.body || {}) });
       ctx.setDisplayConfig(next);
       persistDisplayConfig();
