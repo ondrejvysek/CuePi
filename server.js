@@ -101,6 +101,25 @@ const DISPLAY_LEGACY_TO_PROFILE = {
   luma: 'luma_dsk',
 };
 
+function displaySchemaVersion() { return 1; }
+function displayProfileVersion() { return 1; }
+function displayProfileToLegacy() {
+  return {
+    program: { keyMode: 'none' },
+    chroma_dsk: { keyMode: 'chroma' },
+    luma_dsk: { keyMode: 'luma' },
+  };
+}
+function displayLegacyToProfile() {
+  return {
+    none: 'program',
+    small: 'program',
+    large: 'program',
+    chroma: 'chroma_dsk',
+    luma: 'luma_dsk',
+  };
+}
+
 try {
   if (fs.existsSync(messagesFile)) quickMessages = JSON.parse(fs.readFileSync(messagesFile, 'utf8'));
   else fs.writeFileSync(messagesFile, JSON.stringify(quickMessages));
@@ -126,8 +145,8 @@ try {
 } catch (error) {
   console.error('Display config boot sanitize failed; falling back to defaults:', error);
   displayConfig = sanitizeDisplayConfig({
-    schemaVersion: DISPLAY_SCHEMA_VERSION,
-    profileVersion: DISPLAY_PROFILE_VERSION,
+    schemaVersion: displaySchemaVersion(),
+    profileVersion: displayProfileVersion(),
     profile: 'program',
     keyMode: 'none',
     position: 4,
@@ -240,10 +259,12 @@ function sanitizeDisplayConfig(nextDisplay) {
     ...(bootData.display || {}),
     ...(nextDisplay || {}),
   };
+  const profileToLegacy = displayProfileToLegacy();
+  const legacyToProfile = displayLegacyToProfile();
   const rawProfile = typeof merged.profile === 'string' ? merged.profile.trim() : '';
-  const legacyProfile = DISPLAY_LEGACY_TO_PROFILE[String(merged.keyMode || '').trim()] || 'program';
-  const profile = DISPLAY_PROFILE_TO_LEGACY[rawProfile] ? rawProfile : legacyProfile;
-  const profileLegacyMapping = DISPLAY_PROFILE_TO_LEGACY[profile] || DISPLAY_PROFILE_TO_LEGACY.program;
+  const legacyProfile = legacyToProfile[String(merged.keyMode || '').trim()] || 'program';
+  const profile = profileToLegacy[rawProfile] ? rawProfile : legacyProfile;
+  const profileLegacyMapping = profileToLegacy[profile] || profileToLegacy.program;
   const rawSchemaVersion = Number(merged.schemaVersion);
   const rawProfileVersion = Number(merged.profileVersion);
 
@@ -251,10 +272,10 @@ function sanitizeDisplayConfig(nextDisplay) {
     ...merged,
     schemaVersion: Number.isFinite(rawSchemaVersion) && rawSchemaVersion > 0
       ? Math.floor(rawSchemaVersion)
-      : DISPLAY_SCHEMA_VERSION,
+      : displaySchemaVersion(),
     profileVersion: Number.isFinite(rawProfileVersion) && rawProfileVersion > 0
       ? Math.floor(rawProfileVersion)
-      : DISPLAY_PROFILE_VERSION,
+      : displayProfileVersion(),
     profile,
     keyMode: profileLegacyMapping.keyMode,
     presenterColors: sanitizePresenterColors(merged.presenterColors),
