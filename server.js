@@ -4,12 +4,14 @@ const { Server } = require('socket.io');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
-const { execFile } = require('child_process');
 const crypto = require('crypto');
 
 const { StateStore } = require('./backend/lib/state-store');
 const { TimerEngine } = require('./backend/lib/timer-engine');
 const { QueueEngine } = require('./backend/lib/queue-engine');
+const { structuredError, createRequireAdmin, createLegacyRoute } = require('./backend/lib/api-auth');
+const { createHardware } = require('./backend/lib/hardware');
+const { createLogger } = require('./backend/lib/logger');
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -42,6 +44,12 @@ const apConnectionName = process.env.CUEPI_AP_CONNECTION || 'CuePi_Fallback';
 const legacyApConnectionName = process.env.LEGACY_AP_CONNECTION || 'StageTimer_Fallback';
 const systemdServiceName = process.env.CUEPI_SERVICE_NAME || 'cuepi';
 const legacySystemdServiceName = process.env.LEGACY_CUEPI_SERVICE_NAME || 'stage-timer';
+const hardware = createHardware({
+  systemdServiceName,
+  legacySystemdServiceName,
+  apConnectionName,
+  legacyApConnectionName,
+});
 
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', corsOrigin);
@@ -130,17 +138,7 @@ function broadcast() {
   io.emit('stateUpdate', publicState());
 }
 
-function structuredError(res, code, message, details = null) {
-  return res.status(code).json({ error: message, details });
-}
-
-function requireAdmin(req, res, next) {
-  if (!adminToken) return next();
-  const token = req.header('x-stage-timer-token');
-  if (!token) return structuredError(res, 401, 'Missing admin token');
-  if (token !== adminToken) return structuredError(res, 403, 'Invalid admin token');
-  next();
-}
+const requireAdmin = createRequireAdmin(adminToken);
 
 function parseIntField(value, fieldName, opts = {}) {
   const num = Number(value);
@@ -212,131 +210,9 @@ function persistDisplayConfig() {
   store.saveDisplay(displayConfig);
 }
 
-function legacyRoute(pathName, handler, options = {}) {
-  app.get(pathName, (req, res, next) => {
-    if (strictV2Only) {
-      return res.status(410).json({ error: 'Legacy GET routes are disabled in v2-only mode' });
-    }
-    res.setHeader('Warning', '299 - Deprecated GET; use POST variant');
-    if (options.auth) return requireAdmin(req, res, () => handler(req, res, next));
-    return handler(req, res, next);
-  });
-}
+const legacyRoute = createLegacyRoute(app, { strictV2Only, requireAdmin });
 
-function runCommand(bin, args, cb) {
-  execFile(bin, args, (error, stdout, stderr) => cb(error, stdout, stderr));
-}
-
-function csvEscape(value) {
-  const str = String(value ?? '');
-  if (!/[,"\n]/.test(str)) return str;
-  return `"${str.replace(/"/g, '""')}"`;
-}
-
-function parseCsvRows(text) {
-  const rows = [];
-  let row = [];
-  let cell = '';
-  let inQuotes = false;
-  for (let i = 0; i < text.length; i += 1) {
-    const ch = text[i];
-    const next = text[i + 1];
-    if (ch === '"') {
-      if (inQuotes && next === '"') { cell += '"'; i += 1; }
-      else inQuotes = !inQuotes;
-    } else if (ch === ',' && !inQuotes) {
-      row.push(cell);
-      cell = '';
-    } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
-      if (ch === '\r' && next === '\n') i += 1;
-      row.push(cell);
-      if (row.some((part) => String(part).trim() !== '')) rows.push(row);
-      row = [];
-      cell = '';
-    } else {
-      cell += ch;
-    }
-  }
-  if (cell.length || row.length) {
-    row.push(cell);
-    if (row.some((part) => String(part).trim() !== '')) rows.push(row);
-  }
-  return rows;
-}
-
-function parseDurationToSeconds(raw) {
-  const value = String(raw || '').trim();
-  if (!value) return 0;
-  if (/^\d+$/.test(value)) return Math.max(0, parseInt(value, 10));
-  const parts = value.split(':').map((p) => p.trim()).filter(Boolean).map(Number);
-  if (parts.some((n) => !Number.isFinite(n))) return 0;
-  if (parts.length === 2) return Math.max(0, (parts[0] * 60) + parts[1]);
-  if (parts.length === 3) return Math.max(0, (parts[0] * 3600) + (parts[1] * 60) + parts[2]);
-  return 0;
-}
-
-function parseRundownCsv(csvText) {
-  const rows = parseCsvRows(csvText);
-  if (!rows.length) return { segments: [], warnings: ['CSV is empty'] };
-
-  const header = rows[0].map((v) => String(v || '').trim().toLowerCase());
-  const hasHeader = header.includes('name')
-    || header.includes('segment')
-    || header.includes('duration')
-    || header.includes('mode')
-    || header.includes('notes');
-  const dataRows = hasHeader ? rows.slice(1) : rows;
-  const warnings = [];
-
-  const indexOf = (keys, fallback) => {
-    for (const key of keys) {
-      const idx = header.indexOf(key);
-      if (idx >= 0) return idx;
-    }
-    return fallback;
-  };
-
-  const nameIdx = hasHeader ? indexOf(['name', 'segment', 'title'], 0) : 0;
-  const durationIdx = hasHeader ? indexOf(['duration', 'seconds', 'duration_seconds', 'time'], 1) : 1;
-  const modeIdx = hasHeader ? indexOf(['mode', 'type'], 2) : 2;
-  const notesIdx = hasHeader ? indexOf(['notes', 'note', 'optional_note'], 3) : 3;
-  const validModes = new Set(['countdown', 'countup', 'timeofday', 'logo']);
-
-  const segments = dataRows.map((cols, idx) => {
-    const rowNum = hasHeader ? idx + 2 : idx + 1;
-    const rawName = String(cols[nameIdx] || '').trim();
-    const rawMode = String(cols[modeIdx] || '').trim().toLowerCase();
-    const rawDuration = cols[durationIdx];
-    if (rawMode && !validModes.has(rawMode)) warnings.push(`Row ${rowNum}: unknown mode "${rawMode}", defaulted to countdown`);
-    const seg = queue.sanitizeSegment({
-      name: rawName || 'Untitled Segment',
-      duration: parseDurationToSeconds(rawDuration),
-      mode: validModes.has(rawMode) ? rawMode : 'countdown',
-      notes: String(cols[notesIdx] || '').trim(),
-    });
-    return seg;
-  });
-
-  return { segments, warnings };
-}
-
-function appendActualsLog(segmentName, plannedSeconds, actualSeconds) {
-  const timestamp = new Date().toISOString();
-  const delta = actualSeconds - plannedSeconds;
-  const line = [
-    csvEscape(timestamp),
-    csvEscape(segmentName),
-    csvEscape(plannedSeconds),
-    csvEscape(actualSeconds),
-    csvEscape(delta),
-  ].join(',') + '\n';
-
-  if (!fs.existsSync(actualsLogFile)) {
-    fs.writeFileSync(actualsLogFile, 'timestamp,speaker,planned_seconds,actual_seconds,delta_seconds\n');
-  }
-
-  fs.appendFileSync(actualsLogFile, line);
-}
+const { appendActualsLog } = createLogger({ actualsLogFile, onError: console.error });
 
 function applySegmentToTimer(segment, autoStart = false) {
   if (!segment) return;
@@ -578,15 +454,12 @@ legacyRoute('/api/system/logo/clear', (req, res) => {
 
 app.post('/api/system/restart', requireAdmin, (req, res) => {
   res.json({ ok: true, status: 'Restarting system service' });
-  runCommand('sudo', ['systemctl', 'restart', systemdServiceName], (error) => {
-    if (!error) return;
-    runCommand('sudo', ['systemctl', 'restart', legacySystemdServiceName], () => {});
-  });
+  hardware.restartService();
 });
 
 app.post('/api/system/update', requireAdmin, (req, res) => {
   res.json({ ok: true, status: 'Pulling firmware and system updates' });
-  runCommand('bash', ['-lc', `git pull && npm install && sudo apt update && sudo apt upgrade -y && (sudo systemctl restart ${systemdServiceName} || sudo systemctl restart ${legacySystemdServiceName})`], () => {});
+  hardware.updateSystem();
 });
 
 app.post('/api/system/hostname', requireAdmin, (req, res) => {
@@ -594,7 +467,7 @@ app.post('/api/system/hostname', requireAdmin, (req, res) => {
   if (!name || typeof name !== 'string' || !/^[a-zA-Z0-9-]{1,63}$/.test(name)) {
     return structuredError(res, 400, 'Invalid payload', 'name must be 1-63 chars [a-zA-Z0-9-]');
   }
-  runCommand('sudo', ['hostnamectl', 'set-hostname', name], (error) => {
+  hardware.setHostname(name, (error) => {
     if (error) return structuredError(res, 500, 'Failed to update hostname');
     return res.json({ ok: true, status: 'Hostname updated' });
   });
@@ -604,21 +477,15 @@ app.post('/api/system/ap', requireAdmin, (req, res) => {
   const action = req.body && req.body.action;
   if (!['on', 'off'].includes(action)) return structuredError(res, 400, 'Invalid payload', 'action must be on/off');
   const desired = action === 'on' ? 'up' : 'down';
-  runCommand('sudo', ['nmcli', 'con', desired, apConnectionName], (error) => {
-    if (!error) return res.json({ ok: true, status: `AP ${desired}` });
-    runCommand('sudo', ['nmcli', 'con', desired, legacyApConnectionName], (legacyError) => {
-      if (legacyError) return structuredError(res, 500, 'Failed to switch fallback AP');
-      return res.json({ ok: true, status: `AP ${desired} (legacy connection)` });
-    });
+  hardware.setAp(action, (error, result) => {
+    if (error) return structuredError(res, 500, 'Failed to switch fallback AP');
+    if (result.legacy) return res.json({ ok: true, status: `AP ${result.desired} (legacy connection)` });
+    return res.json({ ok: true, status: `AP ${result.desired}` });
   });
 });
 
 app.get('/api/system/ap/status', requireAdmin, (req, res) => {
-  runCommand('nmcli', ['-t', '-f', 'NAME', 'con', 'show', '--active'], (error, stdout) => {
-    if (error) return res.json({ active: false });
-    const isActive = stdout.includes(apConnectionName) || stdout.includes(legacyApConnectionName);
-    return res.json({ active: isActive });
-  });
+  hardware.getApStatus((_, active) => res.json({ active }));
 });
 
 app.post('/api/system/wifi/scan', requireAdmin, (req, res) => {
