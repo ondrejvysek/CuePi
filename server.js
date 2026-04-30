@@ -17,30 +17,15 @@ app.use(express.json({ limit: '10mb' }));
 const store = new StateStore();
 const bootData = store.init();
 const DEFAULT_PRESENTER_COLORS = {
-  timerText: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
+  text: { ok: '#22c55e', warning: '#ffffff', overflow: '#ffffff' },
   background: { ok: '#000000', warning: '#f97316', overflow: '#ef4444' },
   indicator: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
 };
-const DEFAULT_PRESENTER_COLOR_GROUPS = {
-  text: { ...DEFAULT_PRESENTER_COLORS },
-  background: { ...DEFAULT_PRESENTER_COLORS },
-  indicator: { ...DEFAULT_PRESENTER_COLORS },
-};
-const DEFAULT_PRESENTER_COLOR_GROUPS = {
-  text: { ...DEFAULT_PRESENTER_COLORS },
-  background: { ...DEFAULT_PRESENTER_COLORS },
-  indicator: { ...DEFAULT_PRESENTER_COLORS },
-};
-const DEFAULT_PRESENTER_COLOR_GROUPS = {
-  text: { ...DEFAULT_PRESENTER_COLORS },
-  background: { ...DEFAULT_PRESENTER_COLORS },
-  indicator: { ...DEFAULT_PRESENTER_COLORS },
-};
 function defaultPresenterColorGroups() {
   return {
-    text: { ...DEFAULT_PRESENTER_COLORS },
-    background: { ...DEFAULT_PRESENTER_COLORS },
-    indicator: { ...DEFAULT_PRESENTER_COLORS },
+    text: { ...DEFAULT_PRESENTER_COLORS.text },
+    background: { ...DEFAULT_PRESENTER_COLORS.background },
+    indicator: { ...DEFAULT_PRESENTER_COLORS.indicator },
   };
 }
 
@@ -204,10 +189,11 @@ function sanitizePresenterColors(colors) {
     };
   }
 
+  const fallbackText = input.timerText || input;
   return {
-    timerText: sanitizeSemanticSet(input.timerText, legacy),
-    background: sanitizeSemanticSet(input.background, DEFAULT_PRESENTER_COLORS.background),
-    indicator: sanitizeSemanticSet(input.indicator, DEFAULT_PRESENTER_COLORS.indicator),
+    text: sanitizeTriplet(fallbackText, defaultPresenterColorGroups().text),
+    background: sanitizeTriplet(input.background || {}, defaultPresenterColorGroups().background),
+    indicator: sanitizeTriplet(input.indicator || {}, defaultPresenterColorGroups().indicator),
   };
 }
 
