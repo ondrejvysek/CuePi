@@ -188,6 +188,18 @@
                 </div>
             </div>
 
+            <div class="sys-group">
+                <h3>Display profile</h3>
+                <div class="sys-row">
+                    <select id="display-profile-selector" class="sys-input">
+                        <option value="program">Program (safe)</option>
+                        <option value="chroma_dsk">Chroma DSK (green key background)</option>
+                        <option value="luma_dsk">Luma DSK (black/white luminance style)</option>
+                    </select>
+                    <button onclick="saveDisplayProfile()" class="sys-btn">SAVE</button>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -880,7 +892,9 @@
                 hydratePresenterColorInputs(data.presenterColors);
                 timeFormatPreference = String(data.timeFormat || 'auto');
                 const formatEl = document.getElementById('time-format-selector');
+                const profileEl = document.getElementById('display-profile-selector');
                 if (formatEl) formatEl.value = timeFormatPreference;
+                if (profileEl) profileEl.value = String(data.profile || 'program');
             } catch (error) {
                 console.warn('Display config load failed:', error.message);
             }
@@ -893,6 +907,19 @@
                 const data = await res.json();
                 timeFormatPreference = String((data.displayConfig || {}).timeFormat || 'auto');
                 if (formatEl) formatEl.value = timeFormatPreference;
+            } catch (error) {
+                alert(`Save failed: ${error.message}`);
+            }
+        }
+
+        async function saveDisplayProfile() {
+            const profileEl = document.getElementById('display-profile-selector');
+            const nextProfile = String(profileEl?.value || 'program');
+            try {
+                const res = await apiPost('/api/display-config', { profile: nextProfile });
+                const data = await res.json();
+                const savedProfile = String((data.displayConfig || {}).profile || 'program');
+                if (profileEl) profileEl.value = savedProfile;
             } catch (error) {
                 alert(`Save failed: ${error.message}`);
             }
