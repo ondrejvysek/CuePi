@@ -12,6 +12,10 @@ const { QueueEngine } = require('./backend/lib/queue-engine');
 const { structuredError, createRequireAdmin, createLegacyRoute } = require('./backend/lib/api-auth');
 const { createHardware } = require('./backend/lib/hardware');
 const { createLogger } = require('./backend/lib/logger');
+const { registerTimerRoutes } = require('./backend/lib/routes/timer');
+const { registerRundownRoutes } = require('./backend/lib/routes/rundown');
+const { registerDisplayRoutes } = require('./backend/lib/routes/display');
+const { registerSystemRoutes } = require('./backend/lib/routes/system');
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -239,50 +243,10 @@ app.get('/icon.svg', (req, res) => {
 });
 
 app.get('/api/state', (req, res) => res.json(publicState()));
-app.get('/api/display-config', (req, res) => res.json(displayConfig));
-
 app.get('/presenter.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'presenter.html'));
 });
 app.get('/api/messages', (req, res) => res.json(quickMessages));
-
-app.post('/api/display-config', (req, res) => {
-  try {
-    displayConfig = sanitizeDisplayConfig({ ...displayConfig, ...(req.body || {}) });
-    persistDisplayConfig();
-    broadcast();
-    res.json({ ok: true, displayConfig });
-  } catch (error) {
-    console.error('Display config save failed:', error);
-    structuredError(res, 500, 'Display config save failed', String((error && error.message) || error));
-  }
-});
-
-app.post('/api/start', (req, res) => {
-  timer.start();
-  persistState();
-  broadcast();
-  res.json({ ok: true, status: 'Started' });
-});
-legacyRoute('/api/start', (req, res) => {
-  timer.start();
-  persistState();
-  broadcast();
-  res.send('Started');
-});
-
-app.post('/api/pause', (req, res) => {
-  timer.pause();
-  persistState();
-  broadcast();
-  res.json({ ok: true, status: 'Paused' });
-});
-legacyRoute('/api/pause', (req, res) => {
-  timer.pause();
-  persistState();
-  broadcast();
-  res.send('Paused');
-});
 
 app.post('/api/toggle_playback', (req, res) => {
   timer.togglePlayback();
@@ -301,23 +265,6 @@ function handleResetInput(req) {
   const raw = reqValue(req, 'sec');
   return parseIntField(raw ?? timer.state.durationSeconds, 'sec', { min: 0, max: 86400 });
 }
-
-app.post('/api/reset', requireAdmin, (req, res) => {
-  const parsed = handleResetInput(req);
-  if (parsed.error) return structuredError(res, 400, 'Invalid payload', parsed.error);
-  timer.reset(parsed.value);
-  persistState();
-  broadcast();
-  res.json({ ok: true, status: 'Reset' });
-});
-legacyRoute('/api/reset', (req, res) => {
-  const parsed = handleResetInput(req);
-  if (parsed.error) return res.status(400).send(parsed.error);
-  timer.reset(parsed.value);
-  persistState();
-  broadcast();
-  res.send('Reset');
-}, { auth: true });
 
 app.post('/api/add', (req, res) => {
   const parsed = parseIntField(reqValue(req, 'sec') ?? 0, 'sec', { min: -7200, max: 7200 });
@@ -404,25 +351,6 @@ legacyRoute('/api/message/set', (req, res) => {
   res.send('Message Set');
 });
 
-app.post('/api/message/trigger', (req, res) => {
-  const parsed = parseIntField(reqValue(req, 'index'), 'index', { min: 0, max: quickMessages.length - 1 });
-  if (parsed.error) return structuredError(res, 400, 'Invalid payload', parsed.error);
-  timer.setMessage(quickMessages[parsed.value], 'quick_message');
-  timer.state.showMessage = true;
-  persistState();
-  broadcast();
-  res.json({ ok: true });
-});
-legacyRoute('/api/message/trigger', (req, res) => {
-  const index = parseInt(req.query.index, 10);
-  if (Number.isNaN(index) || index < 0 || index >= quickMessages.length) return res.status(400).send('Invalid Message Index');
-  timer.setMessage(quickMessages[index], 'quick_message');
-  timer.state.showMessage = true;
-  persistState();
-  broadcast();
-  res.send('Message Triggered Live');
-});
-
 app.post('/api/system/logo/upload', requireAdmin, (req, res) => {
   if (!req.body || typeof req.body.image !== 'string' || req.body.image.length === 0) {
     return structuredError(res, 400, 'Invalid payload', 'image is required');
@@ -451,27 +379,6 @@ legacyRoute('/api/system/logo/clear', (req, res) => {
   broadcast();
   res.send('Logo Cleared');
 }, { auth: true });
-
-app.post('/api/system/restart', requireAdmin, (req, res) => {
-  res.json({ ok: true, status: 'Restarting system service' });
-  hardware.restartService();
-});
-
-app.post('/api/system/update', requireAdmin, (req, res) => {
-  res.json({ ok: true, status: 'Pulling firmware and system updates' });
-  hardware.updateSystem();
-});
-
-app.post('/api/system/hostname', requireAdmin, (req, res) => {
-  const name = req.body && req.body.name;
-  if (!name || typeof name !== 'string' || !/^[a-zA-Z0-9-]{1,63}$/.test(name)) {
-    return structuredError(res, 400, 'Invalid payload', 'name must be 1-63 chars [a-zA-Z0-9-]');
-  }
-  hardware.setHostname(name, (error) => {
-    if (error) return structuredError(res, 500, 'Failed to update hostname');
-    return res.json({ ok: true, status: 'Hostname updated' });
-  });
-});
 
 app.post('/api/system/ap', requireAdmin, (req, res) => {
   const action = req.body && req.body.action;
@@ -584,10 +491,6 @@ legacyRoute('/api/messages/remove', (req, res) => {
   res.send('Removed');
 }, { auth: true });
 
-app.get('/api/rundown', (req, res) => {
-  res.json(queue.getState());
-});
-
 app.post('/api/rundown/set', requireAdmin, (req, res) => {
   const rundown = req.body && req.body.rundown;
   if (!Array.isArray(rundown)) return structuredError(res, 400, 'Invalid payload', 'rundown must be an array');
@@ -644,26 +547,6 @@ app.post('/api/rundown/item/remove', requireAdmin, (req, res) => {
   persistState();
   broadcast();
   res.json({ ok: true, removed, ...queue.getState() });
-});
-
-app.post('/api/rundown/next', requireAdmin, (req, res) => {
-  const current = queue.getCurrent();
-  if (current) {
-    const actual = current.mode === 'countdown'
-      ? Math.max(0, (current.duration || 0) - Math.max(0, timer.getRemainingSeconds()))
-      : Math.max(0, timer.getRemainingSeconds());
-    appendActualsLog(current.name, current.duration || 0, actual);
-  }
-
-  const nextSegment = queue.next();
-  if (!nextSegment) return structuredError(res, 400, 'No rundown loaded');
-
-  timer.state.currentIndex = queue.currentIndex;
-  applySegmentToTimer(nextSegment, true);
-  persistRundown();
-  persistState();
-  broadcast();
-  res.json({ ok: true, currentSegment: nextSegment, currentIndex: queue.currentIndex });
 });
 
 app.post('/api/rundown/previous', requireAdmin, (req, res) => {
@@ -732,6 +615,19 @@ io.on('connection', (socket) => {
   socket.emit('stateUpdate', publicState());
   socket.emit('messagesUpdate', quickMessages);
 });
+
+
+registerDisplayRoutes(app, {
+  sanitizeDisplayConfig,
+  persistDisplayConfig,
+  broadcast,
+  structuredError,
+  getDisplayConfig: () => displayConfig,
+  setDisplayConfig: (next) => { displayConfig = next; },
+});
+registerTimerRoutes(app, { timer, persistState, broadcast, structuredError, parseIntField, reqValue, legacyRoute, requireAdmin, quickMessages });
+registerRundownRoutes(app, { queue, timer, requireAdmin, structuredError, parseIntField, persistRundown, persistState, broadcast, applySegmentToTimer, appendActualsLog, actualsLogFile, fs });
+registerSystemRoutes(app, { requireAdmin, structuredError, hardware });
 
 app.use(express.static(path.join(__dirname, 'public')));
 server.listen(3000, bindHost, () => console.log(`Server running on ${bindHost}:3000`));
