@@ -464,10 +464,15 @@ app.post('/api/mode', requireAdmin, (req, res) => {
   const mode = req.body && req.body.set;
   if (mode === 'target') {
     const targetISO = req.body && req.body.targetISO;
+    const repeatSeconds = Number((req.body && req.body.targetRepeatSeconds) || 0);
     if (!targetISO || Number.isNaN(new Date(targetISO).getTime())) {
       return structuredError(res, 400, 'Invalid payload', 'targetISO is required for target mode');
     }
+    if (!Number.isFinite(repeatSeconds) || repeatSeconds < 0) {
+      return structuredError(res, 400, 'Invalid payload', 'targetRepeatSeconds must be >= 0');
+    }
     timer.state.targetISO = targetISO;
+    timer.state.targetRepeatSeconds = Math.floor(repeatSeconds);
   }
   if (!timer.setMode(mode)) return structuredError(res, 400, 'Invalid payload', 'Invalid mode');
   persistState();
@@ -478,8 +483,11 @@ legacyRoute('/api/mode', (req, res) => {
   const mode = req.query && req.query.set;
   if (mode === 'target') {
     const targetISO = req.query && req.query.targetISO;
+    const repeatSeconds = Number((req.query && req.query.targetRepeatSeconds) || 0);
     if (!targetISO || Number.isNaN(new Date(targetISO).getTime())) return res.status(400).send('Missing targetISO');
+    if (!Number.isFinite(repeatSeconds) || repeatSeconds < 0) return res.status(400).send('Invalid targetRepeatSeconds');
     timer.state.targetISO = targetISO;
+    timer.state.targetRepeatSeconds = Math.floor(repeatSeconds);
   }
   if (!timer.setMode(mode)) return res.status(400).send('Invalid Mode');
   persistState();

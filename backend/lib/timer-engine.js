@@ -12,6 +12,7 @@ class TimerEngine {
       showMessage: false,
       currentIndex: 0,
       targetISO: null,
+      targetRepeatSeconds: 0,
       blink_state: false,
       ...initialState,
     };
@@ -29,8 +30,18 @@ class TimerEngine {
     }
 
     if (this.state.mode === 'target') {
-      const target = this.state.targetISO ? new Date(this.state.targetISO).getTime() : null;
+      let target = this.state.targetISO ? new Date(this.state.targetISO).getTime() : null;
       if (!target || Number.isNaN(target)) return 0;
+      const repeatSeconds = Number(this.state.targetRepeatSeconds || 0);
+      if (repeatSeconds > 0) {
+        const repeatMs = repeatSeconds * 1000;
+        const now = this.nowMs();
+        if (target <= now) {
+          const steps = Math.floor((now - target) / repeatMs) + 1;
+          target += steps * repeatMs;
+          this.state.targetISO = new Date(target).toISOString();
+        }
+      }
       const diff = Math.floor((target - this.nowMs()) / 1000);
       return diff;
     }
@@ -158,6 +169,7 @@ class TimerEngine {
       showMessage: this.state.showMessage,
       currentIndex: this.state.currentIndex,
       targetISO: this.state.targetISO,
+      targetRepeatSeconds: this.state.targetRepeatSeconds || 0,
     };
   }
 
@@ -172,6 +184,7 @@ class TimerEngine {
       targetTimestamp: this.state.targetTimestamp,
       durationSeconds: this.state.durationSeconds,
       targetISO: this.state.targetISO,
+      targetRepeatSeconds: this.state.targetRepeatSeconds || 0,
     };
   }
 }
