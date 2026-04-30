@@ -258,19 +258,6 @@ function sanitizePresenterColors(colors) {
   };
 }
 
-const DISPLAY_PROFILE_TO_LEGACY = {
-  program: { keyMode: 'none' },
-  chroma_dsk: { keyMode: 'chroma' },
-  luma_dsk: { keyMode: 'luma' },
-};
-const DISPLAY_LEGACY_TO_PROFILE = {
-  none: 'program',
-  small: 'program',
-  large: 'program',
-  chroma: 'chroma_dsk',
-  luma: 'luma_dsk',
-};
-
 function sanitizeDisplayConfig(nextDisplay) {
   const merged = {
     ...(bootData.display || {}),
