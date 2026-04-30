@@ -17,6 +17,7 @@ const { registerRundownRoutes } = require('./backend/lib/routes/rundown');
 const { registerDisplayRoutes } = require('./backend/lib/routes/display');
 const { registerSystemRoutes } = require('./backend/lib/routes/system');
 const { createRundownCsvParser } = require('./backend/lib/rundown-csv');
+const { badRequest, enumField, numberField, requiredField, stringField, isAcceptedColorFormat } = require('./backend/lib/validators');
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -161,16 +162,6 @@ function reqValue(req, key) {
   return undefined;
 }
 
-function isAcceptedColorFormat(value) {
-  if (typeof value !== 'string') return false;
-  const color = value.trim();
-  if (!color) return false;
-  const hexRe = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
-  const rgbRe = /^rgba?\(\s*(?:\d{1,3}%?\s*,\s*){2}\d{1,3}%?(?:\s*,\s*(?:0|1|0?\.\d+))?\s*\)$/i;
-  const hslRe = /^hsla?\(\s*-?\d{1,3}(?:\.\d+)?(?:deg|rad|turn)?\s*,\s*\d{1,3}%\s*,\s*\d{1,3}%(?:\s*,\s*(?:0|1|0?\.\d+))?\s*\)$/i;
-  return hexRe.test(color) || rgbRe.test(color) || hslRe.test(color);
-}
-
 function sanitizePresenterColors(colors) {
   const input = (colors && typeof colors === 'object') ? colors : {};
   const getColorField = (obj, key) => {
@@ -210,6 +201,46 @@ function sanitizeDisplayConfig(nextDisplay) {
     ...merged,
     presenterColors: sanitizePresenterColors(merged.presenterColors),
   };
+}
+
+function validateRundownSegment(segment, fieldName = 'segment') {
+  const details = [];
+  if (!segment || typeof segment !== 'object' || Array.isArray(segment)) return { ok: false, details: [`${fieldName} must be an object`] };
+  const name = stringField(segment.name, `${fieldName}.name`, { trim: true, min: 1, max: 120 });
+  if (!name.ok) details.push(name.error);
+  const duration = numberField(segment.duration, `${fieldName}.duration`, { integer: true, min: 0, max: 86400 });
+  if (!duration.ok) details.push(duration.error);
+  const mode = enumField(segment.mode, `${fieldName}.mode`, ['countdown', 'countup', 'timeofday', 'target']);
+  if (!mode.ok) details.push(mode.error);
+  if (segment.notes !== undefined) {
+    const notes = stringField(segment.notes, `${fieldName}.notes`, { trim: true, max: 500 });
+    if (!notes.ok) details.push(notes.error);
+  }
+  return { ok: details.length === 0, details };
+}
+
+function validateDisplayConfigPayload(payload) {
+  const details = [];
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return { ok: false, details: ['payload must be an object'] };
+  if (payload.keyMode !== undefined && !enumField(payload.keyMode, 'keyMode', ['none', 'small', 'large']).ok) details.push('keyMode must be one of: none, small, large');
+  if (payload.position !== undefined && !enumField(payload.position, 'position', ['top', 'center', 'bottom']).ok) details.push('position must be one of: top, center, bottom');
+  if (payload.scale !== undefined && !numberField(payload.scale, 'scale', { min: 0.5, max: 3 }).ok) details.push('scale must be >= 0.5 and <= 3');
+  if (payload.margin !== undefined && !numberField(payload.margin, 'margin', { integer: true, min: 0, max: 200 }).ok) details.push('margin must be >= 0 and <= 200');
+  if (payload.presenterColors !== undefined) {
+    const groups = ['text', 'background', 'indicator'];
+    const levels = ['ok', 'warning', 'overflow'];
+    if (!payload.presenterColors || typeof payload.presenterColors !== 'object') details.push('presenterColors must be an object');
+    else {
+      for (const group of groups) {
+        if (payload.presenterColors[group] === undefined) continue;
+        for (const level of levels) {
+          const color = payload.presenterColors[group][level];
+          if (color !== undefined && !isAcceptedColorFormat(color)) details.push(`presenterColors.${group}.${level} must be a valid color`);
+        }
+      }
+    }
+  }
+  return { ok: details.length === 0, details };
 }
 
 function persistDisplayConfig() {
@@ -270,7 +301,7 @@ function handleResetInput(req) {
 
 app.post('/api/add', (req, res) => {
   const parsed = parseIntField(reqValue(req, 'sec') ?? 0, 'sec', { min: -7200, max: 7200 });
-  if (parsed.error) return structuredError(res, 400, 'Invalid payload', parsed.error);
+  if (parsed.error) return badRequest(res, parsed.error)
   timer.add(parsed.value);
   persistState();
   broadcast();
@@ -278,7 +309,7 @@ app.post('/api/add', (req, res) => {
 });
 legacyRoute('/api/add', (req, res) => {
   const parsed = parseIntField((req.query && req.query.sec) ?? 0, 'sec', { min: -7200, max: 7200 });
-  if (parsed.error) return res.status(400).send(parsed.error);
+  if (parsed.error) return badRequest(res, parsed.error);
   timer.add(parsed.value);
   persistState();
   broadcast();
@@ -291,17 +322,13 @@ app.post('/api/mode', requireAdmin, (req, res) => {
     const targetISO = req.body && req.body.targetISO;
     const repeatSeconds = Number((req.body && req.body.targetRepeatSeconds) || 0);
     const targetPreset = String((req.body && req.body.targetPreset) || 'manual');
-    if (!targetISO || Number.isNaN(new Date(targetISO).getTime())) {
-      return structuredError(res, 400, 'Invalid payload', 'targetISO is required for target mode');
-    }
-    if (!Number.isFinite(repeatSeconds) || repeatSeconds < 0) {
-      return structuredError(res, 400, 'Invalid payload', 'targetRepeatSeconds must be >= 0');
-    }
+    if (!targetISO || Number.isNaN(new Date(targetISO).getTime())) return badRequest(res, 'targetISO is required for target mode');
+    if (!Number.isFinite(repeatSeconds) || repeatSeconds < 0) return badRequest(res, 'targetRepeatSeconds must be >= 0');
     timer.state.targetISO = targetISO;
     timer.state.targetRepeatSeconds = Math.floor(repeatSeconds);
     timer.state.targetPreset = ['manual', 'nextfull', 'nexthalf'].includes(targetPreset) ? targetPreset : 'manual';
   }
-  if (!timer.setMode(mode)) return structuredError(res, 400, 'Invalid payload', 'Invalid mode');
+  if (!timer.setMode(mode)) return badRequest(res, 'Invalid mode');
   persistState();
   broadcast();
   res.json({ ok: true, status: 'Mode updated' });
@@ -312,13 +339,13 @@ legacyRoute('/api/mode', (req, res) => {
     const targetISO = req.query && req.query.targetISO;
     const repeatSeconds = Number((req.query && req.query.targetRepeatSeconds) || 0);
     const targetPreset = String((req.query && req.query.targetPreset) || 'manual');
-    if (!targetISO || Number.isNaN(new Date(targetISO).getTime())) return res.status(400).send('Missing targetISO');
-    if (!Number.isFinite(repeatSeconds) || repeatSeconds < 0) return res.status(400).send('Invalid targetRepeatSeconds');
+    if (!targetISO || Number.isNaN(new Date(targetISO).getTime())) return badRequest(res, 'targetISO is required for target mode');
+    if (!Number.isFinite(repeatSeconds) || repeatSeconds < 0) return badRequest(res, 'targetRepeatSeconds must be >= 0');
     timer.state.targetISO = targetISO;
     timer.state.targetRepeatSeconds = Math.floor(repeatSeconds);
     timer.state.targetPreset = ['manual', 'nextfull', 'nexthalf'].includes(targetPreset) ? targetPreset : 'manual';
   }
-  if (!timer.setMode(mode)) return res.status(400).send('Invalid Mode');
+  if (!timer.setMode(mode)) return badRequest(res, 'Invalid mode');
   persistState();
   broadcast();
   res.send('Mode updated');
@@ -355,7 +382,7 @@ legacyRoute('/api/message/set', (req, res) => {
 
 app.post('/api/system/logo/upload', requireAdmin, (req, res) => {
   if (!req.body || typeof req.body.image !== 'string' || req.body.image.length === 0) {
-    return structuredError(res, 400, 'Invalid payload', 'image is required');
+    return badRequest(res, 'image is required');
   }
   timer.state.logoData = req.body.image;
   logoData = req.body.image;
@@ -384,7 +411,7 @@ legacyRoute('/api/system/logo/clear', (req, res) => {
 
 app.post('/api/system/ap', requireAdmin, (req, res) => {
   const action = req.body && req.body.action;
-  if (!['on', 'off'].includes(action)) return structuredError(res, 400, 'Invalid payload', 'action must be on/off');
+  if (!['on', 'off'].includes(action)) return badRequest(res, 'action must be on/off');
   const desired = action === 'on' ? 'up' : 'down';
   hardware.setAp(action, (error, result) => {
     if (error) return structuredError(res, 500, 'Failed to switch fallback AP');
@@ -417,7 +444,7 @@ app.post('/api/system/wifi/connect', requireAdmin, (req, res) => {
   const ssid = req.body && req.body.ssid;
   const password = req.body && req.body.password;
   if (!ssid || typeof ssid !== 'string' || ssid.length > 128) {
-    return structuredError(res, 400, 'Invalid payload', 'ssid is required (1-128 chars)');
+    return badRequest(res, 'ssid is required (1-128 chars)');
   }
 
   const args = ['nmcli', 'dev', 'wifi', 'connect', ssid];
@@ -431,7 +458,7 @@ app.post('/api/system/wifi/connect', requireAdmin, (req, res) => {
 
 app.post('/api/system/wifi/static', requireAdmin, (req, res) => {
   const { ssid, ip, gateway } = req.body || {};
-  if (!ssid || typeof ssid !== 'string') return structuredError(res, 400, 'Invalid payload', 'ssid is required');
+  if (!ssid || typeof ssid !== 'string') return badRequest(res, 'ssid is required');
 
   if (ip === 'auto') {
     runCommand('sudo', ['nmcli', 'con', 'modify', ssid, 'ipv4.method', 'auto'], (error) => {
@@ -444,7 +471,7 @@ app.post('/api/system/wifi/static', requireAdmin, (req, res) => {
     return;
   }
 
-  if (!ip || !gateway) return structuredError(res, 400, 'Invalid payload', 'ip and gateway are required unless ip=auto');
+  if (!ip || !gateway) return badRequest(res, 'ip and gateway are required unless ip=auto');
 
   runCommand('sudo', ['nmcli', 'con', 'modify', ssid, 'ipv4.addresses', ip, 'ipv4.gateway', gateway, 'ipv4.method', 'manual'], (error) => {
     if (error) return structuredError(res, 500, 'Failed to set static IP');
@@ -457,7 +484,7 @@ app.post('/api/system/wifi/static', requireAdmin, (req, res) => {
 
 app.post('/api/messages/add', requireAdmin, (req, res) => {
   const text = String((req.body && req.body.text) || '').trim();
-  if (!text) return structuredError(res, 400, 'Invalid payload', 'text is required');
+  if (!text) return badRequest(res, 'text is required');
   if (!quickMessages.includes(text)) {
     quickMessages.push(text);
     saveMessages();
@@ -466,18 +493,19 @@ app.post('/api/messages/add', requireAdmin, (req, res) => {
   res.json({ ok: true, messages: quickMessages });
 });
 legacyRoute('/api/messages/add', (req, res) => {
-  const text = req.query.text;
-  if (text && !quickMessages.includes(text)) {
+  const text = String((req.query && req.query.text) || '').trim();
+  if (!text) return badRequest(res, 'text is required');
+  if (!quickMessages.includes(text)) {
     quickMessages.push(text);
     saveMessages();
     io.emit('messagesUpdate', quickMessages);
   }
-  res.send('Added');
+  res.json({ ok: true, messages: quickMessages });
 }, { auth: true });
 
 app.post('/api/messages/remove', requireAdmin, (req, res) => {
   const parsed = parseIntField(req.body && req.body.index, 'index', { min: 0, max: quickMessages.length - 1 });
-  if (parsed.error) return structuredError(res, 400, 'Invalid payload', parsed.error);
+  if (parsed.error) return badRequest(res, parsed.error)
   quickMessages.splice(parsed.value, 1);
   saveMessages();
   io.emit('messagesUpdate', quickMessages);
@@ -485,17 +513,21 @@ app.post('/api/messages/remove', requireAdmin, (req, res) => {
 });
 legacyRoute('/api/messages/remove', (req, res) => {
   const index = parseInt(req.query.index, 10);
-  if (!Number.isNaN(index) && index >= 0 && index < quickMessages.length) {
-    quickMessages.splice(index, 1);
-    saveMessages();
-    io.emit('messagesUpdate', quickMessages);
-  }
-  res.send('Removed');
+  if (Number.isNaN(index) || index < 0 || index >= quickMessages.length) return badRequest(res, 'index must be within quick message bounds');
+  quickMessages.splice(index, 1);
+  saveMessages();
+  io.emit('messagesUpdate', quickMessages);
+  res.json({ ok: true, messages: quickMessages });
 }, { auth: true });
 
 app.post('/api/rundown/set', requireAdmin, (req, res) => {
   const rundown = req.body && req.body.rundown;
-  if (!Array.isArray(rundown)) return structuredError(res, 400, 'Invalid payload', 'rundown must be an array');
+  if (!Array.isArray(rundown)) return badRequest(res, 'rundown must be an array');
+  const validationErrors = rundown.flatMap((segment, idx) => {
+    const validation = validateRundownSegment(segment, `rundown[${idx}]`);
+    return validation.ok ? [] : validation.details;
+  });
+  if (validationErrors.length) return badRequest(res, validationErrors);
 
   queue.setRundown(rundown);
   timer.state.currentIndex = queue.currentIndex;
@@ -509,7 +541,7 @@ app.post('/api/rundown/set', requireAdmin, (req, res) => {
 app.post('/api/rundown/import', requireAdmin, (req, res) => {
   const csv = String((req.body && req.body.csv) || '');
   const importMode = (req.body && req.body.importMode) === 'append' ? 'append' : 'replace';
-  if (!csv.trim()) return structuredError(res, 400, 'Invalid payload', 'csv is required');
+  if (!csv.trim()) return badRequest(res, 'csv is required');
   const parsed = parseRundownCsv(csv);
   if (!parsed.segments.length) return structuredError(res, 400, 'CSV import failed', parsed.warnings);
   const combined = importMode === 'append' ? [...queue.rundown, ...parsed.segments] : parsed.segments;
@@ -522,7 +554,8 @@ app.post('/api/rundown/import', requireAdmin, (req, res) => {
 
 app.post('/api/rundown/item/add', requireAdmin, (req, res) => {
   const segment = req.body && req.body.segment;
-  if (!segment || typeof segment !== 'object') return structuredError(res, 400, 'Invalid payload', 'segment is required');
+  const validation = validateRundownSegment(segment, 'segment');
+  if (!validation.ok) return badRequest(res, validation.details);
   queue.addSegment(segment);
   persistRundown();
   broadcast();
@@ -531,9 +564,10 @@ app.post('/api/rundown/item/add', requireAdmin, (req, res) => {
 
 app.post('/api/rundown/item/update', requireAdmin, (req, res) => {
   const parsed = parseIntField(req.body && req.body.index, 'index', { min: 0, max: queue.rundown.length - 1 });
-  if (parsed.error) return structuredError(res, 400, 'Invalid payload', parsed.error);
+  if (parsed.error) return badRequest(res, parsed.error)
   const segment = req.body && req.body.segment;
-  if (!segment || typeof segment !== 'object') return structuredError(res, 400, 'Invalid payload', 'segment is required');
+  const validation = validateRundownSegment(segment, 'segment');
+  if (!validation.ok) return badRequest(res, validation.details);
   const updated = queue.updateSegment(parsed.value, segment);
   persistRundown();
   broadcast();
@@ -542,7 +576,7 @@ app.post('/api/rundown/item/update', requireAdmin, (req, res) => {
 
 app.post('/api/rundown/item/remove', requireAdmin, (req, res) => {
   const parsed = parseIntField(req.body && req.body.index, 'index', { min: 0, max: queue.rundown.length - 1 });
-  if (parsed.error) return structuredError(res, 400, 'Invalid payload', parsed.error);
+  if (parsed.error) return badRequest(res, parsed.error)
   const removed = queue.removeSegment(parsed.value);
   timer.state.currentIndex = queue.currentIndex;
   persistRundown();
@@ -621,8 +655,10 @@ io.on('connection', (socket) => {
 
 registerDisplayRoutes(app, {
   sanitizeDisplayConfig,
+  validateDisplayConfigPayload,
   persistDisplayConfig,
   broadcast,
+  badRequest,
   structuredError,
   getDisplayConfig: () => displayConfig,
   setDisplayConfig: (next) => { displayConfig = next; },
