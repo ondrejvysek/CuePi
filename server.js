@@ -21,21 +21,6 @@ const DEFAULT_PRESENTER_COLORS = {
   background: { ok: '#000000', warning: '#f97316', overflow: '#ef4444' },
   indicator: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
 };
-const DEFAULT_PRESENTER_COLOR_GROUPS = {
-  text: { ...DEFAULT_PRESENTER_COLORS },
-  background: { ...DEFAULT_PRESENTER_COLORS },
-  indicator: { ...DEFAULT_PRESENTER_COLORS },
-};
-const DEFAULT_PRESENTER_COLOR_GROUPS = {
-  text: { ...DEFAULT_PRESENTER_COLORS },
-  background: { ...DEFAULT_PRESENTER_COLORS },
-  indicator: { ...DEFAULT_PRESENTER_COLORS },
-};
-const DEFAULT_PRESENTER_COLOR_GROUPS = {
-  text: { ...DEFAULT_PRESENTER_COLORS },
-  background: { ...DEFAULT_PRESENTER_COLORS },
-  indicator: { ...DEFAULT_PRESENTER_COLORS },
-};
 function defaultPresenterColorGroups() {
   return {
     text: { ...DEFAULT_PRESENTER_COLORS },
