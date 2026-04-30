@@ -228,14 +228,14 @@
             </div>
             <div class="sys-group">
                 <h3>Target Date & Time</h3>
-                <div class="preset-grid" style="grid-template-columns: repeat(5, 1fr); margin-bottom:10px;">
-                    <button id="target-mode-manual" onclick="setTargetModePreset('manual')" class="btn-preset active">To date/time</button>
-                    <button id="target-mode-next60" onclick="setTargetModePreset('next60')" class="btn-preset">Next 60</button>
-                    <button id="target-mode-next30" onclick="setTargetModePreset('next30')" class="btn-preset">Next 30</button>
-                    <button id="target-mode-nextfull" onclick="setTargetModePreset('nextfull')" class="btn-preset">Next full</button>
-                    <button id="target-mode-nexthalf" onclick="setTargetModePreset('nexthalf')" class="btn-preset">Next half</button>
+                <div class="sys-row" style="gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+                    <button id="target-mode-manual" onclick="setTargetModePreset('manual')" class="btn-toggle-on" style="padding:10px 12px; min-width:110px;">To date/time</button>
+                    <button id="target-mode-next60" onclick="setTargetModePreset('next60')" class="btn-preset" style="padding:10px 12px;">Next 60</button>
+                    <button id="target-mode-next30" onclick="setTargetModePreset('next30')" class="btn-preset" style="padding:10px 12px;">Next 30</button>
+                    <button id="target-mode-nextfull" onclick="setTargetModePreset('nextfull')" class="btn-preset" style="padding:10px 12px;">Next full</button>
+                    <button id="target-mode-nexthalf" onclick="setTargetModePreset('nexthalf')" class="btn-preset" style="padding:10px 12px;">Next half</button>
                 </div>
-                <div class="sys-row">
+                <div id="target-manual-row" class="sys-row">
                     <input type="datetime-local" id="target-datetime" class="sys-input">
                     <button onclick="setTargetMode()" class="sys-btn">SET</button>
                 </div>
@@ -699,18 +699,22 @@
             const hour12 = timeFormatPreference === '12h' ? true : timeFormatPreference === '24h' ? false : undefined;
             return value.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short', hour12 });
         }
-        function setTargetRepeat(seconds) {
-            selectedTargetRepeatSeconds = Number(seconds) || 0;
-            document.getElementById('target-repeat-30')?.classList.toggle('active', selectedTargetRepeatSeconds === 1800);
-            document.getElementById('target-repeat-60')?.classList.toggle('active', selectedTargetRepeatSeconds === 3600);
-        }
-        function setTargetModePreset(mode) {
+        function setTargetModePreset(mode, autoApply = true) {
             targetModePreset = mode || 'manual';
             ['manual', 'next60', 'next30', 'nextfull', 'nexthalf'].forEach((key) => {
-                document.getElementById(`target-mode-${key}`)?.classList.toggle('active', targetModePreset === key);
+                const isActive = targetModePreset === key;
+                const el = document.getElementById(`target-mode-${key}`);
+                if (!el) return;
+                el.classList.toggle('btn-toggle-on', isActive);
+                el.classList.toggle('btn-preset', !isActive);
             });
             const dateInput = document.getElementById('target-datetime');
             if (dateInput) dateInput.disabled = targetModePreset !== 'manual';
+            const manualRow = document.getElementById('target-manual-row');
+            if (manualRow) manualRow.style.display = targetModePreset === 'manual' ? 'flex' : 'none';
+            if (autoApply && targetModePreset !== 'manual') {
+                setTargetMode(true);
+            }
         }
         function nextBoundaryIso(stepMinutes) {
             const now = new Date();
@@ -908,36 +912,39 @@
             return `${days.toString().padStart(2, '0')} ${dayLabel} ${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         }
 
-        async function setTargetMode() {
+        async function setTargetMode(fromPreset = false) {
             if (targetModePreset === 'manual') {
                 const value = document.getElementById('target-datetime').value;
                 if (!value) return alert('Please select date and time');
                 selectedTargetISO = new Date(value).toISOString();
             } else if (targetModePreset === 'next60') {
                 selectedTargetISO = nextBoundaryIso(60);
-                setTargetRepeat(3600);
+                selectedTargetRepeatSeconds = 3600;
             } else if (targetModePreset === 'next30') {
                 selectedTargetISO = nextBoundaryIso(30);
-                setTargetRepeat(1800);
+                selectedTargetRepeatSeconds = 1800;
             } else if (targetModePreset === 'nextfull') {
                 selectedTargetISO = nextBoundaryIso(60);
-                setTargetRepeat(0);
+                selectedTargetRepeatSeconds = 0;
             } else if (targetModePreset === 'nexthalf') {
                 selectedTargetISO = nextBoundaryIso(30);
-                setTargetRepeat(0);
+                selectedTargetRepeatSeconds = 0;
             }
             const displayBtn = document.getElementById('target-display-btn');
             if (displayBtn) {
+                const modeLabel = targetModePreset === 'manual' ? formatDateTimeForUi(selectedTargetISO) : `Mode: ${document.getElementById(`target-mode-${targetModePreset}`)?.innerText || targetModePreset}`;
                 const repeatLabel = selectedTargetRepeatSeconds > 0 ? ` • repeats every ${Math.floor(selectedTargetRepeatSeconds / 60)}m` : '';
-                displayBtn.innerText = `${formatDateTimeForUi(selectedTargetISO)}${repeatLabel}`;
+                displayBtn.innerText = `${modeLabel}${repeatLabel}`;
             }
-            closeTargetModal();
+            if (!fromPreset) closeTargetModal();
+            if (fromPreset) await triggerTargetCountdown(true);
         }
 
-        async function triggerTargetCountdown() {
+        async function triggerTargetCountdown(skipValidation = false) {
             if (!selectedTargetISO) return alert('Select date/time first');
             try {
                 await apiPost('/api/mode', { set: 'target', targetISO: selectedTargetISO, targetRepeatSeconds: selectedTargetRepeatSeconds });
+                if (skipValidation) closeTargetModal();
             } catch (error) {
                 alert(`Failed to set target mode: ${error.message}`);
             }
@@ -1333,11 +1340,15 @@
             if (s.targetISO) {
                 selectedTargetISO = s.targetISO;
                 selectedTargetRepeatSeconds = Number(s.targetRepeatSeconds || 0);
-                setTargetRepeat(selectedTargetRepeatSeconds);
+                targetModePreset = selectedTargetRepeatSeconds === 3600 ? 'next60'
+                    : selectedTargetRepeatSeconds === 1800 ? 'next30'
+                    : 'manual';
+                setTargetModePreset(targetModePreset, false);
                 const displayBtn = document.getElementById('target-display-btn');
                 if (displayBtn) {
+                    const modeLabel = targetModePreset === 'manual' ? formatDateTimeForUi(selectedTargetISO) : `Mode: ${document.getElementById(`target-mode-${targetModePreset}`)?.innerText || targetModePreset}`;
                     const repeatLabel = selectedTargetRepeatSeconds > 0 ? ` • repeats every ${Math.floor(selectedTargetRepeatSeconds / 60)}m` : '';
-                    displayBtn.innerText = `${formatDateTimeForUi(selectedTargetISO)}${repeatLabel}`;
+                    displayBtn.innerText = `${modeLabel}${repeatLabel}`;
                 }
             }
 
@@ -1491,7 +1502,7 @@
             hintPinToggle.addEventListener('change', () => localStorage.setItem('hintPinToPresenter', hintPinToggle.checked ? '1' : '0'));
             setRundownFlowMode(localStorage.getItem('rundownFlowMode') || 'overflow');
             document.getElementById('hint-threshold-seconds').value = getHintThreshold();
-            setTargetModePreset('manual');
+            setTargetModePreset('manual', false);
             loadDisplayConfig();
             loadRundown();
         });
