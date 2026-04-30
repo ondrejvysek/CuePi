@@ -257,8 +257,9 @@
                 <h3>Event branding and color config</h3>
                 <p style="font-size:11px; color:var(--text-dim); margin-top:-8px;">Semantic colors (ok/warning/overflow) for timer text, background, and indicator.</p>
                 <div id="branding-color-grid"></div>
-                <div class="sys-row" style="margin-top:10px; margin-bottom:0;">
-                    <button onclick="savePresenterColors()" class="sys-btn" style="width:100%;">SAVE PRESENTER COLORS</button>
+                <div class="sys-row" style="margin-top:10px; margin-bottom:0; gap:10px; align-items:stretch;">
+                    <button onclick="loadPresenterColorDefaults()" class="sys-btn" style="flex:1; background:#334155;">LOAD DEFAULT COLORS</button>
+                    <button onclick="savePresenterColors()" class="sys-btn" style="flex:1;">SAVE PRESENTER COLORS</button>
                 </div>
             </div>
         </div>
@@ -704,16 +705,29 @@
         }
 
         function hydratePresenterColorInputs(colors = {}) {
-            const textColors = getPresenterTextColors(colors || {});
+            const source = (colors && typeof colors === 'object') ? colors : {};
+            const textColors = getPresenterTextColors(source);
             presenterColors = { ...presenterColorDefaults, ...(textColors || {}) };
-            const okRaw = String(presenterColors.ok || '').trim().toLowerCase();
-            if (!okRaw || presenterBlackValues.has(okRaw)) presenterColors.ok = presenterColorDefaults.ok;
+            const normalized = {
+                text: { ...presenterColorDefaults, ...(source.text || textColors || {}) },
+                background: { ...presenterColorDefaults, ...(source.background || {}) },
+                indicator: { ...presenterColorDefaults, ...(source.indicator || {}) },
+            };
+            const okRaw = String(normalized.text.ok || '').trim().toLowerCase();
+            if (!okRaw || presenterBlackValues.has(okRaw)) normalized.text.ok = presenterColorDefaults.ok;
+            presenterColors = { ...normalized.text };
             const okEl = document.getElementById('presenter-color-ok');
             const warnEl = document.getElementById('presenter-color-warning');
             const overEl = document.getElementById('presenter-color-overflow');
             if (okEl) okEl.value = presenterColors.ok || presenterColorDefaults.ok;
             if (warnEl) warnEl.value = presenterColors.warning || presenterColorDefaults.warning;
             if (overEl) overEl.value = presenterColors.overflow || presenterColorDefaults.overflow;
+            document.querySelectorAll('[data-presenter-color-text]').forEach((textEl) => {
+                const path = String(textEl.dataset.presenterColorText || '');
+                const [groupKey, semanticKey] = path.split('.');
+                const value = normalized[groupKey]?.[semanticKey] || presenterColorDefaults[semanticKey];
+                textEl.value = value;
+            });
             syncPresenterColorPickers();
         }
 
@@ -721,7 +735,7 @@
             const container = document.getElementById('branding-color-grid');
             if (!container || container.dataset.ready === '1') return;
             const groups = [
-                ['timerText', 'Timer Text'],
+                ['text', 'Timer Text'],
                 ['background', 'Background'],
                 ['indicator', 'Indicator'],
             ];
@@ -761,28 +775,44 @@
             const okEl = document.getElementById('presenter-color-ok');
             const warnEl = document.getElementById('presenter-color-warning');
             const overEl = document.getElementById('presenter-color-overflow');
-            const payload = {
-                presenterColors: {
+            const grouped = {
+                text: {
                     ok: String(okEl?.value || presenterColorDefaults.ok).trim(),
                     warning: String(warnEl?.value || presenterColorDefaults.warning).trim(),
                     overflow: String(overEl?.value || presenterColorDefaults.overflow).trim(),
                 },
+                background: {},
+                indicator: {},
+            };
+            document.querySelectorAll('[data-presenter-color-text]').forEach((textEl) => {
+                const path = String(textEl.dataset.presenterColorText || '');
+                const [groupKey, semanticKey] = path.split('.');
+                if (!groupKey || !semanticKey || !grouped[groupKey]) return;
+                grouped[groupKey][semanticKey] = String(textEl.value || presenterColorDefaults[semanticKey]).trim();
+            });
+            const payload = {
+                presenterColors: grouped,
             };
             try {
                 const res = await apiPost('/api/display-config', payload);
                 const data = await res.json();
                 hydratePresenterColorInputs((data.displayConfig || {}).presenterColors);
-                alert('Presenter colors saved.');
+                closeBrandingColorsModal();
             } catch (error) {
                 alert(`Save failed: ${error.message}`);
             }
         }
 
         async function loadPresenterColorDefaults() {
-            hydratePresenterColorInputs({ ...presenterColorDefaults });
+            const defaults = {
+                text: { ...presenterColorDefaults },
+                background: { ...presenterColorDefaults },
+                indicator: { ...presenterColorDefaults },
+            };
+            hydratePresenterColorInputs(defaults);
             try {
                 const res = await apiPost('/api/display-config', {
-                    presenterColors: { ...presenterColorDefaults },
+                    presenterColors: defaults,
                 });
                 const data = await res.json();
                 hydratePresenterColorInputs((data.displayConfig || {}).presenterColors);

@@ -108,18 +108,18 @@
         let localTimeInterval = null;
         const defaultPresenterColors = { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' };
         const blackValues = new Set(['#000', '#000000', 'black', 'rgb(0,0,0)', 'rgb(0, 0, 0)']);
-        function getPresenterTextColors(colors = {}) {
-            if (colors && typeof colors === 'object' && colors.text && typeof colors.text === 'object') {
-                return colors.text;
-            }
-            return colors;
-        }
-
         function normalizePresenterColors(colors) {
-            const textColors = getPresenterTextColors(colors || {});
-            const next = { ...defaultPresenterColors, ...(textColors || {}) };
-            const okRaw = String(next.ok || '').trim().toLowerCase();
-            if (!okRaw || blackValues.has(okRaw)) next.ok = defaultPresenterColors.ok;
+            const source = (colors && typeof colors === 'object') ? colors : {};
+            const textSource = source.text && typeof source.text === 'object'
+                ? source.text
+                : source;
+            const next = {
+                text: { ...defaultPresenterColors, ...(textSource || {}) },
+                background: { ...defaultPresenterColors, ...((source.background && typeof source.background === 'object') ? source.background : {}) },
+                indicator: { ...defaultPresenterColors, ...((source.indicator && typeof source.indicator === 'object') ? source.indicator : {}) },
+            };
+            const okRaw = String(next.text.ok || '').trim().toLowerCase();
+            if (!okRaw || blackValues.has(okRaw)) next.text.ok = defaultPresenterColors.ok;
             return next;
         }
 
@@ -133,9 +133,9 @@
 
         function applyPresenterColors(colors) {
             const next = normalizePresenterColors(colors);
-            document.documentElement.style.setProperty('--ok', next.ok);
-            document.documentElement.style.setProperty('--warning', next.warning);
-            document.documentElement.style.setProperty('--overflow', next.overflow);
+            document.documentElement.style.setProperty('--ok', next.text.ok);
+            document.documentElement.style.setProperty('--warning', next.text.warning);
+            document.documentElement.style.setProperty('--overflow', next.text.overflow);
             return next;
         }
 
@@ -167,7 +167,7 @@
                 logoDisplay.style.display = 'none';
                 document.getElementById('clock-container').style.display = 'flex';
                 clock.style.opacity = '1';
-                clock.style.color = semanticColors.ok;
+                clock.style.color = semanticColors.text.ok;
                 if (!localTimeInterval) {
                     localTimeInterval = setInterval(() => {
                         if(currentMode === 'timeofday') {
@@ -194,7 +194,7 @@
                     clock.innerText = "EVENT LOGO";
                     clock.style.fontSize = "12vw";
                     clock.style.opacity = "1";
-                    clock.style.color = semanticColors.ok;
+                    clock.style.color = semanticColors.text.ok;
                 }
                 document.getElementById('progress-container').style.display = 'none';
 
@@ -217,14 +217,14 @@
                 let fontSizeVw = 84 / (charCount * 0.6);
                 if (fontSizeVw > 28) fontSizeVw = 28;
                 clock.style.fontSize = fontSizeVw + "vw";
-                clock.style.color = semanticColors[semanticState] || semanticColors.ok;
+                clock.style.color = semanticColors.text[semanticState] || semanticColors.text.ok;
                 clock.style.textShadow = semanticState === 'ok' ? 'none' : '0 0 16px rgba(0,0,0,0.35)';
 
                 if (semanticState === 'overflow') {
-                    document.body.style.backgroundColor = semanticColors.overflow;
+                    document.body.style.backgroundColor = semanticColors.background.overflow;
                     clock.style.color = '#ffffff';
                 } else if (semanticState === 'warning') {
-                    document.body.style.backgroundColor = semanticColors.warning;
+                    document.body.style.backgroundColor = semanticColors.background.warning;
                     clock.style.color = '#ffffff';
                 } else {
                     document.body.style.backgroundColor = '#000000';
