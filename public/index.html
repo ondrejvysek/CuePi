@@ -190,6 +190,7 @@
                     <input type="text" id="presenter-color-overflow" class="sys-input" placeholder="#ef4444 / rgb(...) / hsl(...)">
                 </div>
                 <div class="sys-row" style="margin-bottom:0;">
+                    <button onclick="loadPresenterColorDefaults()" class="sys-btn" style="width:100%; background:#334155; margin-bottom:8px;">LOAD DEFAULT COLORS</button>
                     <button onclick="savePresenterColors()" class="sys-btn" style="width:100%;">SAVE PRESENTER COLORS</button>
                 </div>
             </div>
@@ -435,6 +436,13 @@
             let selectedTargetISO = null;
             const presenterColorDefaults = { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' };
             let presenterColors = { ...presenterColorDefaults };
+            const presenterBlackValues = new Set(['#000', '#000000', 'black', 'rgb(0,0,0)', 'rgb(0, 0, 0)']);
+            function getPresenterTextColors(colors = {}) {
+                if (colors && typeof colors === 'object' && colors.text && typeof colors.text === 'object') {
+                    return colors.text;
+                }
+                return colors;
+            }
 
         // Audio Cues Logic
         let audioEnabled = false;
@@ -676,10 +684,16 @@
         }
 
         function hydratePresenterColorInputs(colors = {}) {
-            presenterColors = { ...presenterColorDefaults, ...(colors || {}) };
-            document.getElementById('presenter-color-ok').value = presenterColors.ok || presenterColorDefaults.ok;
-            document.getElementById('presenter-color-warning').value = presenterColors.warning || presenterColorDefaults.warning;
-            document.getElementById('presenter-color-overflow').value = presenterColors.overflow || presenterColorDefaults.overflow;
+            const textColors = getPresenterTextColors(colors || {});
+            presenterColors = { ...presenterColorDefaults, ...(textColors || {}) };
+            const okRaw = String(presenterColors.ok || '').trim().toLowerCase();
+            if (!okRaw || presenterBlackValues.has(okRaw)) presenterColors.ok = presenterColorDefaults.ok;
+            const okEl = document.getElementById('presenter-color-ok');
+            const warnEl = document.getElementById('presenter-color-warning');
+            const overEl = document.getElementById('presenter-color-overflow');
+            if (okEl) okEl.value = presenterColors.ok || presenterColorDefaults.ok;
+            if (warnEl) warnEl.value = presenterColors.warning || presenterColorDefaults.warning;
+            if (overEl) overEl.value = presenterColors.overflow || presenterColorDefaults.overflow;
             syncPresenterColorPickers();
         }
 
@@ -695,11 +709,14 @@
         }
 
         async function savePresenterColors() {
+            const okEl = document.getElementById('presenter-color-ok');
+            const warnEl = document.getElementById('presenter-color-warning');
+            const overEl = document.getElementById('presenter-color-overflow');
             const payload = {
                 presenterColors: {
-                    ok: document.getElementById('presenter-color-ok').value.trim(),
-                    warning: document.getElementById('presenter-color-warning').value.trim(),
-                    overflow: document.getElementById('presenter-color-overflow').value.trim(),
+                    ok: String(okEl?.value || presenterColorDefaults.ok).trim(),
+                    warning: String(warnEl?.value || presenterColorDefaults.warning).trim(),
+                    overflow: String(overEl?.value || presenterColorDefaults.overflow).trim(),
                 },
             };
             try {
@@ -712,17 +729,31 @@
             }
         }
 
+        async function loadPresenterColorDefaults() {
+            hydratePresenterColorInputs({ ...presenterColorDefaults });
+            try {
+                const res = await apiPost('/api/display-config', {
+                    presenterColors: { ...presenterColorDefaults },
+                });
+                const data = await res.json();
+                hydratePresenterColorInputs((data.displayConfig || {}).presenterColors);
+                alert('Default presenter colors loaded.');
+            } catch (error) {
+                alert(`Default load failed: ${error.message}`);
+            }
+        }
+
         function openTargetModal() { document.getElementById('target-modal').classList.add('active'); }
         function closeTargetModal() { document.getElementById('target-modal').classList.remove('active'); }
 
         function formatCountdownSignedDDHHMMSS(timeLeftSeconds) {
-            const sign = timeLeftSeconds > 0 ? '-' : '+';
             const abs = Math.abs(timeLeftSeconds);
             const days = Math.floor(abs / 86400);
             const hours = Math.floor((abs % 86400) / 3600);
             const mins = Math.floor((abs % 3600) / 60);
             const secs = abs % 60;
-            return `${sign}${days.toString().padStart(2, '0')} ${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            const dayLabel = days === 1 ? 'day' : 'days';
+            return `${days.toString().padStart(2, '0')} ${dayLabel} ${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         }
 
         async function setTargetMode() {
@@ -1111,7 +1142,7 @@
         }
 
         socket.on('stateUpdate', async s => {
-            presenterColors = { ...presenterColorDefaults, ...(s.presenterColors || {}) };
+            presenterColors = { ...presenterColorDefaults, ...(getPresenterTextColors(s.presenterColors) || {}) };
             document.getElementById('ip-display').innerText = s.ip;
             document.getElementById('current-ip-info').innerText = `Current Interface: ${s.ip} (Netmask: ${s.netmask || 'N/A'})`;
             
@@ -1172,7 +1203,7 @@
                     activeRundownHintStep = s.currentIndex;
                     lastRundownHintSegment = `${s.currentIndex}:${nextName}`;
 
-                    const nextMessage = nextNote;
+                    const nextMessage = nextNote ? `Up next: ${nextNote}` : '';
                     autoRundownMessageText = nextMessage;
                     autoRundownMessageStep = s.currentIndex;
                     if (document.getElementById('hint-pin-toggle').checked && nextMessage) {
@@ -1224,8 +1255,10 @@
                     }
                     if (s.mode === 'countdown') {
                         if (s.timeLeft <= 0) monitorTime.style.color = presenterColors.overflow;
-                        else if (s.timeLeft <= 120) monitorTime.style.color = presenterColors.warning; 
+                        else if (s.timeLeft <= Math.max(120, getHintThreshold())) monitorTime.style.color = presenterColors.warning; 
                         else monitorTime.style.color = presenterColors.ok;
+                    } else if (s.mode === 'target') {
+                        monitorTime.style.color = s.timeLeft <= 0 ? presenterColors.overflow : presenterColors.ok;
                     } else monitorTime.style.color = presenterColors.ok;
                 }
             }
