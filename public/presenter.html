@@ -106,7 +106,11 @@
 
         let currentMode = 'countdown';
         let localTimeInterval = null;
-        const defaultPresenterColors = { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' };
+        const defaultPresenterColors = {
+            text: { ok: '#22c55e', warning: '#ffffff', overflow: '#ffffff' },
+            background: { ok: '#000000', warning: '#f97316', overflow: '#ef4444' },
+            indicator: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
+        };
         const blackValues = new Set(['#000', '#000000', 'black', 'rgb(0,0,0)', 'rgb(0, 0, 0)']);
         function normalizePresenterColors(colors) {
             const source = (colors && typeof colors === 'object') ? colors : {};
@@ -114,12 +118,12 @@
                 ? source.text
                 : source;
             const next = {
-                text: { ...defaultPresenterColors, ...(textSource || {}) },
-                background: { ...defaultPresenterColors, ...((source.background && typeof source.background === 'object') ? source.background : {}) },
-                indicator: { ...defaultPresenterColors, ...((source.indicator && typeof source.indicator === 'object') ? source.indicator : {}) },
+                text: { ...defaultPresenterColors.text, ...(textSource || {}) },
+                background: { ...defaultPresenterColors.background, ...((source.background && typeof source.background === 'object') ? source.background : {}) },
+                indicator: { ...defaultPresenterColors.indicator, ...((source.indicator && typeof source.indicator === 'object') ? source.indicator : {}) },
             };
             const okRaw = String(next.text.ok || '').trim().toLowerCase();
-            if (!okRaw || blackValues.has(okRaw)) next.text.ok = defaultPresenterColors.ok;
+            if (!okRaw || blackValues.has(okRaw)) next.text.ok = defaultPresenterColors.text.ok;
             return next;
         }
 
@@ -220,15 +224,7 @@
                 clock.style.color = semanticColors.text[semanticState] || semanticColors.text.ok;
                 clock.style.textShadow = semanticState === 'ok' ? 'none' : '0 0 16px rgba(0,0,0,0.35)';
 
-                if (semanticState === 'overflow') {
-                    document.body.style.backgroundColor = semanticColors.background.overflow;
-                    clock.style.color = '#ffffff';
-                } else if (semanticState === 'warning') {
-                    document.body.style.backgroundColor = semanticColors.background.warning;
-                    clock.style.color = '#ffffff';
-                } else {
-                    document.body.style.backgroundColor = '#000000';
-                }
+                document.body.style.backgroundColor = semanticColors.background[semanticState] || semanticColors.background.ok;
 
                 if (state.mode === 'countdown') {
                     const progress = state.timeLeft <= 0 ? 0 : (state.timeLeft / state.initialTime) * 100;

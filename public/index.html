@@ -458,8 +458,12 @@
             let rundownFlowMode = localStorage.getItem('rundownFlowMode') || 'overflow';
             let v2OnlyMode = false;
             let selectedTargetISO = null;
-            const presenterColorDefaults = { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' };
-            let presenterColors = { ...presenterColorDefaults };
+            const presenterColorDefaults = {
+                text: { ok: '#22c55e', warning: '#ffffff', overflow: '#ffffff' },
+                background: { ok: '#000000', warning: '#f97316', overflow: '#ef4444' },
+                indicator: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
+            };
+            let presenterColors = { ...presenterColorDefaults.text };
             const presenterBlackValues = new Set(['#000', '#000000', 'black', 'rgb(0,0,0)', 'rgb(0, 0, 0)']);
             function getPresenterTextColors(colors = {}) {
                 if (colors && typeof colors === 'object' && colors.text && typeof colors.text === 'object') {
@@ -707,25 +711,25 @@
         function hydratePresenterColorInputs(colors = {}) {
             const source = (colors && typeof colors === 'object') ? colors : {};
             const textColors = getPresenterTextColors(source);
-            presenterColors = { ...presenterColorDefaults, ...(textColors || {}) };
+            presenterColors = { ...presenterColorDefaults.text, ...(textColors || {}) };
             const normalized = {
-                text: { ...presenterColorDefaults, ...(source.text || textColors || {}) },
-                background: { ...presenterColorDefaults, ...(source.background || {}) },
-                indicator: { ...presenterColorDefaults, ...(source.indicator || {}) },
+                text: { ...presenterColorDefaults.text, ...(source.text || textColors || {}) },
+                background: { ...presenterColorDefaults.background, ...(source.background || {}) },
+                indicator: { ...presenterColorDefaults.indicator, ...(source.indicator || {}) },
             };
             const okRaw = String(normalized.text.ok || '').trim().toLowerCase();
-            if (!okRaw || presenterBlackValues.has(okRaw)) normalized.text.ok = presenterColorDefaults.ok;
+            if (!okRaw || presenterBlackValues.has(okRaw)) normalized.text.ok = presenterColorDefaults.text.ok;
             presenterColors = { ...normalized.text };
             const okEl = document.getElementById('presenter-color-ok');
             const warnEl = document.getElementById('presenter-color-warning');
             const overEl = document.getElementById('presenter-color-overflow');
-            if (okEl) okEl.value = presenterColors.ok || presenterColorDefaults.ok;
-            if (warnEl) warnEl.value = presenterColors.warning || presenterColorDefaults.warning;
-            if (overEl) overEl.value = presenterColors.overflow || presenterColorDefaults.overflow;
+            if (okEl) okEl.value = presenterColors.ok || presenterColorDefaults.text.ok;
+            if (warnEl) warnEl.value = presenterColors.warning || presenterColorDefaults.text.warning;
+            if (overEl) overEl.value = presenterColors.overflow || presenterColorDefaults.text.overflow;
             document.querySelectorAll('[data-presenter-color-text]').forEach((textEl) => {
                 const path = String(textEl.dataset.presenterColorText || '');
                 const [groupKey, semanticKey] = path.split('.');
-                const value = normalized[groupKey]?.[semanticKey] || presenterColorDefaults[semanticKey];
+                const value = normalized[groupKey]?.[semanticKey] || presenterColorDefaults[groupKey]?.[semanticKey];
                 textEl.value = value;
             });
             syncPresenterColorPickers();
@@ -777,9 +781,9 @@
             const overEl = document.getElementById('presenter-color-overflow');
             const grouped = {
                 text: {
-                    ok: String(okEl?.value || presenterColorDefaults.ok).trim(),
-                    warning: String(warnEl?.value || presenterColorDefaults.warning).trim(),
-                    overflow: String(overEl?.value || presenterColorDefaults.overflow).trim(),
+                    ok: String(okEl?.value || presenterColorDefaults.text.ok).trim(),
+                    warning: String(warnEl?.value || presenterColorDefaults.text.warning).trim(),
+                    overflow: String(overEl?.value || presenterColorDefaults.text.overflow).trim(),
                 },
                 background: {},
                 indicator: {},
@@ -788,7 +792,7 @@
                 const path = String(textEl.dataset.presenterColorText || '');
                 const [groupKey, semanticKey] = path.split('.');
                 if (!groupKey || !semanticKey || !grouped[groupKey]) return;
-                grouped[groupKey][semanticKey] = String(textEl.value || presenterColorDefaults[semanticKey]).trim();
+                grouped[groupKey][semanticKey] = String(textEl.value || presenterColorDefaults[groupKey]?.[semanticKey]).trim();
             });
             const payload = {
                 presenterColors: grouped,
@@ -805,9 +809,9 @@
 
         async function loadPresenterColorDefaults() {
             const defaults = {
-                text: { ...presenterColorDefaults },
-                background: { ...presenterColorDefaults },
-                indicator: { ...presenterColorDefaults },
+                text: { ...presenterColorDefaults.text },
+                background: { ...presenterColorDefaults.background },
+                indicator: { ...presenterColorDefaults.indicator },
             };
             hydratePresenterColorInputs(defaults);
             try {
@@ -1221,7 +1225,7 @@
         }
 
         socket.on('stateUpdate', async s => {
-            presenterColors = { ...presenterColorDefaults, ...(getPresenterTextColors(s.presenterColors) || {}) };
+            presenterColors = { ...presenterColorDefaults.text, ...(getPresenterTextColors(s.presenterColors) || {}) };
             document.getElementById('ip-display').innerText = s.ip;
             document.getElementById('current-ip-info').innerText = `Current Interface: ${s.ip} (Netmask: ${s.netmask || 'N/A'})`;
             
