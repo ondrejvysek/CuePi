@@ -120,7 +120,21 @@ try {
 const timer = new TimerEngine({ ...bootData.state, logoData });
 const queue = new QueueEngine(bootData.rundown, timer.state.currentIndex || 0);
 const parseRundownCsv = createRundownCsvParser(queue);
-let displayConfig = sanitizeDisplayConfig(bootData.display || {});
+let displayConfig;
+try {
+  displayConfig = sanitizeDisplayConfig(bootData.display || {});
+} catch (error) {
+  console.error('Display config boot sanitize failed; falling back to defaults:', error);
+  displayConfig = sanitizeDisplayConfig({
+    schemaVersion: DISPLAY_SCHEMA_VERSION,
+    profileVersion: DISPLAY_PROFILE_VERSION,
+    profile: 'program',
+    keyMode: 'none',
+    position: 4,
+    scale: 1,
+    margin: 24,
+  });
+}
 store.saveDisplay(displayConfig);
 
 if (!fs.existsSync(logsDir)) {
