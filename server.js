@@ -120,6 +120,25 @@ function displayLegacyToProfile() {
   };
 }
 
+function displaySchemaVersion() { return 1; }
+function displayProfileVersion() { return 1; }
+function displayProfileToLegacy() {
+  return {
+    program: { keyMode: 'none' },
+    chroma_dsk: { keyMode: 'chroma' },
+    luma_dsk: { keyMode: 'luma' },
+  };
+}
+function displayLegacyToProfile() {
+  return {
+    none: 'program',
+    small: 'program',
+    large: 'program',
+    chroma: 'chroma_dsk',
+    luma: 'luma_dsk',
+  };
+}
+
 try {
   if (fs.existsSync(messagesFile)) quickMessages = JSON.parse(fs.readFileSync(messagesFile, 'utf8'));
   else fs.writeFileSync(messagesFile, JSON.stringify(quickMessages));
