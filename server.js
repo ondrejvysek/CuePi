@@ -665,7 +665,22 @@ registerDisplayRoutes(app, {
 });
 registerTimerRoutes(app, { timer, persistState, broadcast, structuredError, parseIntField, reqValue, legacyRoute, requireAdmin, quickMessages });
 registerRundownRoutes(app, { queue, timer, requireAdmin, structuredError, parseIntField, persistRundown, persistState, broadcast, applySegmentToTimer, appendActualsLog, actualsLogFile, fs });
-registerSystemRoutes(app, { requireAdmin, structuredError, hardware });
+registerSystemRoutes(app, {
+  requireAdmin,
+  structuredError,
+  hardware,
+  store,
+  getDisplayConfig: () => displayConfig,
+  setDisplayConfig: (next) => { displayConfig = next; },
+  sanitizeDisplayConfig,
+  queue,
+  timer,
+  persistState,
+  persistRundown,
+  persistDisplayConfig,
+  broadcast,
+  serviceName: systemdServiceName,
+});
 
 app.use(express.static(path.join(__dirname, 'public')));
 server.listen(3000, bindHost, () => console.log(`Server running on ${bindHost}:3000`));

@@ -266,11 +266,31 @@
         </div>
     </div>
 
+
+    <div id="config-transfer-modal" class="modal-overlay">
+        <div class="modal-content" style="width:min(560px,96vw);">
+            <div class="modal-title">
+                CONFIG EXPORT / IMPORT
+                <button onclick="closeConfigTransferModal()" style="background:none; border:none; color:white; font-size:20px; cursor:pointer;">×</button>
+            </div>
+            <p style="color:var(--text-dim); margin-top:0;">Export full CuePi config or import a previously exported JSON file.</p>
+            <div class="sys-row" style="gap:10px; margin-bottom:12px;">
+                <button onclick="exportSystemConfig()" class="sys-btn" style="flex:1;">EXPORT CONFIG</button>
+                <button onclick="document.getElementById('config-import-input').click()" class="sys-btn" style="flex:1; background:#334155;">CHOOSE IMPORT FILE</button>
+                <input type="file" id="config-import-input" class="hidden" accept="application/json,.json" onchange="stageSystemConfigImport(this)">
+            </div>
+            <div id="config-import-file" style="font-size:12px; color:var(--text-dim); margin-bottom:14px;">No file selected.</div>
+            <button onclick="confirmAndImportSystemConfig()" class="sys-btn" style="width:100%; background:rgba(239,68,68,0.2); border-color:rgba(239,68,68,0.5);">IMPORT (OVERWRITE CURRENT CONFIG)</button>
+            <p style="font-size:11px; color:#fca5a5; margin-top:10px;">Import overwrites config/state/display/rundown and reloads the service.</p>
+        </div>
+    </div>
+
     <div class="container">
         <header>
             <div style="font-weight: 900; font-size: 24px;">CuePi <span style="font-size: 12px; opacity: 0.5; font-weight: normal;">Moderator</span></div>
             <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
                 <div class="ip-badge" id="ip-display">Connecting...</div>
+                <button onclick="openConfigTransferModal()" class="btn-header-danger" style="background:var(--card); color:#93c5fd; border-color:rgba(96,165,250,0.4);">⤴ CONFIG</button>
                 <button id="btn-audio" onclick="toggleAudio()" class="btn-header-danger" style="color:var(--text-dim); border-color:var(--border);">🔕 AUDIO OFF</button>
                 <button onclick="openSettings()" class="btn-header-danger" style="background:var(--card); color:white; border-color:var(--border);">⚙️ SETTINGS</button>
                 <button onclick="document.getElementById('restart-modal').classList.add('active')" class="btn-header-danger" style="color:var(--red);">RESTART</button>
@@ -591,6 +611,65 @@
                 document.getElementById('minput').value = '';
             } catch (error) {
                 alert(`Save failed: ${error.message}`);
+            }
+        }
+
+
+        let pendingSystemImportPayload = null;
+        let pendingSystemImportName = '';
+
+        function openConfigTransferModal() { document.getElementById('config-transfer-modal').classList.add('active'); }
+        function closeConfigTransferModal() { document.getElementById('config-transfer-modal').classList.remove('active'); }
+
+        async function exportSystemConfig() {
+            try {
+                const res = await fetch('/api/system/export', { headers: getApiHeaders(false) });
+                if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
+                const payload = await res.json();
+                const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+                const a = document.createElement('a');
+                const stamp = new Date().toISOString().replace(/[.:]/g, '-');
+                a.href = URL.createObjectURL(blob);
+                a.download = `cuepi-export-${stamp}.json`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(a.href);
+            } catch (error) {
+                alert(`Export failed: ${error.message}`);
+            }
+        }
+
+        function stageSystemConfigImport(input) {
+            const file = input && input.files && input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                try {
+                    pendingSystemImportPayload = JSON.parse(String(reader.result || '{}'));
+                    pendingSystemImportName = file.name;
+                    document.getElementById('config-import-file').innerText = `Ready to import: ${pendingSystemImportName}`;
+                } catch (error) {
+                    pendingSystemImportPayload = null;
+                    pendingSystemImportName = '';
+                    document.getElementById('config-import-file').innerText = 'Invalid JSON file selected.';
+                    alert(`Invalid JSON: ${error.message}`);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        async function confirmAndImportSystemConfig() {
+            if (!pendingSystemImportPayload) return alert('Choose a valid export JSON first.');
+            if (!confirm(`Import ${pendingSystemImportName}? This will overwrite current config/state/display/rundown.`)) return;
+            try {
+                const res = await apiPost('/api/system/import', pendingSystemImportPayload, false);
+                if (!res) throw new Error('Import endpoint unavailable');
+                await apiPost('/api/system/restart', {}, false);
+                alert('Import successful. Service is restarting now.');
+                setTimeout(() => window.location.reload(), 4500);
+            } catch (error) {
+                alert(`Import failed: ${error.message}`);
             }
         }
 
