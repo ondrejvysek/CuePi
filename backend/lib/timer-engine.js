@@ -13,6 +13,7 @@ class TimerEngine {
       currentIndex: 0,
       targetISO: null,
       targetRepeatSeconds: 0,
+      targetPreset: 'manual',
       blink_state: false,
       ...initialState,
     };
@@ -170,6 +171,7 @@ class TimerEngine {
       currentIndex: this.state.currentIndex,
       targetISO: this.state.targetISO,
       targetRepeatSeconds: this.state.targetRepeatSeconds || 0,
+      targetPreset: this.state.targetPreset || 'manual',
     };
   }
 
@@ -185,6 +187,7 @@ class TimerEngine {
       durationSeconds: this.state.durationSeconds,
       targetISO: this.state.targetISO,
       targetRepeatSeconds: this.state.targetRepeatSeconds || 0,
+      targetPreset: this.state.targetPreset || 'manual',
     };
   }
 }

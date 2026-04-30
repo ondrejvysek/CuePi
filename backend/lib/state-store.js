@@ -24,6 +24,7 @@ const DEFAULT_STATE = {
   showMessage: false,
   currentIndex: 0,
   targetISO: null,
+  targetPreset: 'manual',
 };
 
 const DEFAULT_DISPLAY = {

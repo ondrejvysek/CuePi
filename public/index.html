@@ -244,13 +244,6 @@
                 <div class="sys-row" style="margin-top:10px;">
                     <button onclick="setTargetMode()" class="sys-btn" style="width:100%;">SET</button>
                 </div>
-                <div class="sys-row" style="margin-top:10px;">
-                    <label style="font-size:12px; color:var(--text-dim); min-width:92px;">Repeat</label>
-                    <div class="preset-grid cols-2" style="margin-bottom:0; width:100%;">
-                        <button id="target-repeat-30" onclick="setTargetRepeat(1800)" class="btn-preset">Every 30 min</button>
-                        <button id="target-repeat-60" onclick="setTargetRepeat(3600)" class="btn-preset">Every 60 min</button>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -489,7 +482,6 @@
             let rundownFlowMode = localStorage.getItem('rundownFlowMode') || 'overflow';
             let v2OnlyMode = false;
             let selectedTargetISO = null;
-            let selectedTargetRepeatSeconds = 0;
             let targetModePreset = 'manual';
             let timeFormatPreference = 'auto';
             const presenterColorDefaults = {
@@ -921,16 +913,13 @@
                 selectedTargetISO = new Date(value).toISOString();
             } else if (targetModePreset === 'nextfull') {
                 selectedTargetISO = nextBoundaryIso(60);
-                selectedTargetRepeatSeconds = 0;
             } else if (targetModePreset === 'nexthalf') {
                 selectedTargetISO = nextBoundaryIso(30);
-                selectedTargetRepeatSeconds = 0;
             }
             const displayBtn = document.getElementById('target-display-btn');
             if (displayBtn) {
                 const modeLabel = targetModePreset === 'manual' ? formatDateTimeForUi(selectedTargetISO) : `Mode: ${document.getElementById(`target-mode-${targetModePreset}`)?.innerText || targetModePreset}`;
-                const repeatLabel = selectedTargetRepeatSeconds > 0 ? ` • repeats every ${Math.floor(selectedTargetRepeatSeconds / 60)}m` : '';
-                displayBtn.innerText = `${modeLabel}${repeatLabel}`;
+                displayBtn.innerText = modeLabel;
             }
             await triggerTargetCountdown();
         }
@@ -938,7 +927,7 @@
         async function triggerTargetCountdown(skipValidation = false) {
             if (!selectedTargetISO) return alert('Select date/time first');
             try {
-                await apiPost('/api/mode', { set: 'target', targetISO: selectedTargetISO, targetRepeatSeconds: selectedTargetRepeatSeconds });
+                await apiPost('/api/mode', { set: 'target', targetISO: selectedTargetISO, targetRepeatSeconds: 0, targetPreset: targetModePreset });
             } catch (error) {
                 alert(`Failed to set target mode: ${error.message}`);
             }
@@ -1333,14 +1322,13 @@
             if(activeBtn) { activeBtn.style.border = '1px solid #60a5fa'; activeBtn.style.color = '#60a5fa'; }
             if (s.targetISO) {
                 selectedTargetISO = s.targetISO;
-                selectedTargetRepeatSeconds = Number(s.targetRepeatSeconds || 0);
-                targetModePreset = 'manual';
+                targetModePreset = String(s.targetPreset || 'manual');
+                if (!['manual', 'nextfull', 'nexthalf'].includes(targetModePreset)) targetModePreset = 'manual';
                 setTargetModePreset(targetModePreset);
                 const displayBtn = document.getElementById('target-display-btn');
                 if (displayBtn) {
                     const modeLabel = targetModePreset === 'manual' ? formatDateTimeForUi(selectedTargetISO) : `Mode: ${document.getElementById(`target-mode-${targetModePreset}`)?.innerText || targetModePreset}`;
-                    const repeatLabel = selectedTargetRepeatSeconds > 0 ? ` • repeats every ${Math.floor(selectedTargetRepeatSeconds / 60)}m` : '';
-                    displayBtn.innerText = `${modeLabel}${repeatLabel}`;
+                    displayBtn.innerText = modeLabel;
                 }
             }
 
