@@ -36,6 +36,13 @@ const DEFAULT_PRESENTER_COLOR_GROUPS = {
   background: { ...DEFAULT_PRESENTER_COLORS },
   indicator: { ...DEFAULT_PRESENTER_COLORS },
 };
+function defaultPresenterColorGroups() {
+  return {
+    text: { ...DEFAULT_PRESENTER_COLORS },
+    background: { ...DEFAULT_PRESENTER_COLORS },
+    indicator: { ...DEFAULT_PRESENTER_COLORS },
+  };
+}
 
 if (!bootData.config.uuid) {
   bootData.config.uuid = crypto.randomUUID();
@@ -189,10 +196,11 @@ function sanitizePresenterColors(colors) {
 
   const hasGrouped = input.text || input.background || input.indicator;
   if (hasGrouped) {
+    const groupedDefaults = defaultPresenterColorGroups();
     return {
-      text: sanitizeTriplet(input.text || {}, DEFAULT_PRESENTER_COLOR_GROUPS.text),
-      background: sanitizeTriplet(input.background || {}, DEFAULT_PRESENTER_COLOR_GROUPS.background),
-      indicator: sanitizeTriplet(input.indicator || {}, DEFAULT_PRESENTER_COLOR_GROUPS.indicator),
+      text: sanitizeTriplet(input.text || {}, groupedDefaults.text),
+      background: sanitizeTriplet(input.background || {}, groupedDefaults.background),
+      indicator: sanitizeTriplet(input.indicator || {}, groupedDefaults.indicator),
     };
   }
 
