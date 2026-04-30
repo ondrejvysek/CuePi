@@ -59,6 +59,11 @@
         .preset-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
         .btn-preset { background: rgba(71, 85, 105, 0.4); border: 1px solid transparent; padding: 15px; border-radius: 12px; color: #fff; font-weight: 900; cursor: pointer; transition: all 0.2s; }
         .btn-preset:hover { background: rgba(71, 85, 105, 0.6); }
+        .segmented-toggle { display:flex; gap:0; border:1px solid rgba(45,212,191,0.6); border-radius:999px; overflow:hidden; background: rgba(15,23,42,0.9); box-shadow: 0 0 0 1px rgba(45,212,191,0.15), 0 0 16px rgba(45,212,191,0.12); }
+        .segmented-toggle .seg-btn { flex:1; border:none; border-radius:0; padding:10px 8px; color:#cbd5e1; background: transparent; font-weight:800; cursor:pointer; transition: all 0.18s ease; }
+        .segmented-toggle .seg-btn + .seg-btn { border-left: 1px solid rgba(45,212,191,0.2); }
+        .segmented-toggle .seg-btn:hover { background: rgba(45,212,191,0.12); color:#e2e8f0; }
+        .segmented-toggle .seg-btn.active { background: linear-gradient(135deg, #14b8a6, #06b6d4); color:#06202b; text-shadow:none; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.25); }
 
         .btn-msg-bank {
             background: linear-gradient(145deg, #1e293b, #0f172a); border: 1px solid #334155; padding: 15px 15px 15px 40px; border-radius: 12px; color: #fff; font-weight: 700; cursor: pointer; transition: all 0.2s; position: relative; text-align: left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
@@ -172,28 +177,17 @@
             </div>
 
             <div class="sys-group">
-                <h3>Event branding and color config</h3>
-                <p style="font-size:11px; color:var(--text-dim); margin-top:-8px;">Semantic presenter colors (ok, warning, overflow). Supports hex/rgb[a]/hsl[a].</p>
-                <div class="sys-row" style="align-items:center;">
-                    <label style="width:72px; font-size:12px; color:var(--text-dim);">OK</label>
-                    <input type="color" id="presenter-color-ok-picker" class="sys-input" style="flex:none; width:58px; padding:4px;">
-                    <input type="text" id="presenter-color-ok" class="sys-input" placeholder="#22c55e / rgb(...) / hsl(...)">
-                </div>
-                <div class="sys-row" style="align-items:center;">
-                    <label style="width:72px; font-size:12px; color:var(--text-dim);">Warning</label>
-                    <input type="color" id="presenter-color-warning-picker" class="sys-input" style="flex:none; width:58px; padding:4px;">
-                    <input type="text" id="presenter-color-warning" class="sys-input" placeholder="#f97316 / rgb(...) / hsl(...)">
-                </div>
-                <div class="sys-row" style="align-items:center;">
-                    <label style="width:72px; font-size:12px; color:var(--text-dim);">Overflow</label>
-                    <input type="color" id="presenter-color-overflow-picker" class="sys-input" style="flex:none; width:58px; padding:4px;">
-                    <input type="text" id="presenter-color-overflow" class="sys-input" placeholder="#ef4444 / rgb(...) / hsl(...)">
-                </div>
-                <div class="sys-row" style="margin-bottom:0;">
-                    <button onclick="loadPresenterColorDefaults()" class="sys-btn" style="width:100%; background:#334155; margin-bottom:8px;">LOAD DEFAULT COLORS</button>
-                    <button onclick="savePresenterColors()" class="sys-btn" style="width:100%;">SAVE PRESENTER COLORS</button>
+                <h3>Time display format</h3>
+                <div class="sys-row">
+                    <select id="time-format-selector" class="sys-input">
+                        <option value="auto">Auto (browser/system)</option>
+                        <option value="24h">24-hour</option>
+                        <option value="12h">12-hour (AM/PM)</option>
+                    </select>
+                    <button onclick="saveTimeFormatPreference()" class="sys-btn">SAVE</button>
                 </div>
             </div>
+
         </div>
     </div>
 
@@ -209,16 +203,23 @@
     </div>
 
     <div id="target-modal" class="modal-overlay">
-        <div class="modal-content" style="width: 420px;">
+        <div class="modal-content" style="width: min(620px, 96vw);">
             <div class="modal-title">
                 COUNT TO DATE/TIME
                 <button onclick="closeTargetModal()" style="background:none; border:none; color:white; font-size:20px; cursor:pointer;">×</button>
             </div>
             <div class="sys-group">
                 <h3>Target Date & Time</h3>
-                <div class="sys-row">
+                <div class="segmented-toggle" style="margin-bottom:10px;">
+                    <button id="target-mode-manual" onclick="setTargetModePreset('manual')" class="seg-btn active">To date/time</button>
+                    <button id="target-mode-nextfull" onclick="setTargetModePreset('nextfull')" class="seg-btn">Next full</button>
+                    <button id="target-mode-nexthalf" onclick="setTargetModePreset('nexthalf')" class="seg-btn">Next half</button>
+                </div>
+                <div id="target-manual-row" class="sys-row">
                     <input type="datetime-local" id="target-datetime" class="sys-input">
-                    <button onclick="setTargetMode()" class="sys-btn">SET</button>
+                </div>
+                <div class="sys-row" style="margin-top:10px;">
+                    <button onclick="setTargetMode()" class="sys-btn" style="width:100%;">SET</button>
                 </div>
             </div>
         </div>
@@ -257,8 +258,9 @@
                 <h3>Event branding and color config</h3>
                 <p style="font-size:11px; color:var(--text-dim); margin-top:-8px;">Semantic colors (ok/warning/overflow) for timer text, background, and indicator.</p>
                 <div id="branding-color-grid"></div>
-                <div class="sys-row" style="margin-top:10px; margin-bottom:0;">
-                    <button onclick="savePresenterColors()" class="sys-btn" style="width:100%;">SAVE PRESENTER COLORS</button>
+                <div class="sys-row" style="margin-top:10px; margin-bottom:0; gap:10px; align-items:stretch;">
+                    <button onclick="loadPresenterColorDefaults()" class="sys-btn" style="flex:1; background:#334155;">LOAD DEFAULT COLORS</button>
+                    <button onclick="savePresenterColors()" class="sys-btn" style="flex:1;">SAVE PRESENTER COLORS</button>
                 </div>
             </div>
         </div>
@@ -457,8 +459,15 @@
             let rundownFlowMode = localStorage.getItem('rundownFlowMode') || 'overflow';
             let v2OnlyMode = false;
             let selectedTargetISO = null;
-            const presenterColorDefaults = { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' };
-            let presenterColors = { ...presenterColorDefaults };
+            let selectedTargetRepeatSeconds = 0;
+            let targetModePreset = 'manual';
+            let timeFormatPreference = 'auto';
+            const presenterColorDefaults = {
+                text: { ok: '#22c55e', warning: '#ffffff', overflow: '#ffffff' },
+                background: { ok: '#000000', warning: '#f97316', overflow: '#ef4444' },
+                indicator: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
+            };
+            let presenterColors = { ...presenterColorDefaults.text };
             const presenterBlackValues = new Set(['#000', '#000000', 'black', 'rgb(0,0,0)', 'rgb(0, 0, 0)']);
             function getPresenterTextColors(colors = {}) {
                 if (colors && typeof colors === 'object' && colors.text && typeof colors.text === 'object') {
@@ -660,6 +669,31 @@
             fetch('/api/system/wifi/static', { method: 'POST', headers: getApiHeaders(true), body: JSON.stringify({ ssid, ip: 'auto' }) });
         }
 
+        function formatDateTimeForUi(dateLike) {
+            const value = new Date(dateLike);
+            const hour12 = timeFormatPreference === '12h' ? true : timeFormatPreference === '24h' ? false : undefined;
+            return value.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short', hour12 });
+        }
+        function setTargetModePreset(mode) {
+            targetModePreset = mode || 'manual';
+            ['manual', 'nextfull', 'nexthalf'].forEach((key) => {
+                const isActive = targetModePreset === key;
+                const el = document.getElementById(`target-mode-${key}`);
+                if (!el) return;
+                el.classList.toggle('active', isActive);
+            });
+            const dateInput = document.getElementById('target-datetime');
+            if (dateInput) dateInput.disabled = targetModePreset !== 'manual';
+            const manualRow = document.getElementById('target-manual-row');
+            if (manualRow) manualRow.style.display = targetModePreset === 'manual' ? 'flex' : 'none';
+        }
+        function nextBoundaryIso(stepMinutes) {
+            const now = new Date();
+            const stepMs = stepMinutes * 60 * 1000;
+            const next = new Date(Math.ceil(now.getTime() / stepMs) * stepMs);
+            return next.toISOString();
+        }
+
         async function checkAPStatus() {
             try {
                 const res = await fetch('/api/system/ap/status', { headers: getApiHeaders(false) });
@@ -704,16 +738,29 @@
         }
 
         function hydratePresenterColorInputs(colors = {}) {
-            const textColors = getPresenterTextColors(colors || {});
-            presenterColors = { ...presenterColorDefaults, ...(textColors || {}) };
-            const okRaw = String(presenterColors.ok || '').trim().toLowerCase();
-            if (!okRaw || presenterBlackValues.has(okRaw)) presenterColors.ok = presenterColorDefaults.ok;
+            const source = (colors && typeof colors === 'object') ? colors : {};
+            const textColors = getPresenterTextColors(source);
+            presenterColors = { ...presenterColorDefaults.text, ...(textColors || {}) };
+            const normalized = {
+                text: { ...presenterColorDefaults.text, ...(source.text || textColors || {}) },
+                background: { ...presenterColorDefaults.background, ...(source.background || {}) },
+                indicator: { ...presenterColorDefaults.indicator, ...(source.indicator || {}) },
+            };
+            const okRaw = String(normalized.text.ok || '').trim().toLowerCase();
+            if (!okRaw || presenterBlackValues.has(okRaw)) normalized.text.ok = presenterColorDefaults.text.ok;
+            presenterColors = { ...normalized.text };
             const okEl = document.getElementById('presenter-color-ok');
             const warnEl = document.getElementById('presenter-color-warning');
             const overEl = document.getElementById('presenter-color-overflow');
-            if (okEl) okEl.value = presenterColors.ok || presenterColorDefaults.ok;
-            if (warnEl) warnEl.value = presenterColors.warning || presenterColorDefaults.warning;
-            if (overEl) overEl.value = presenterColors.overflow || presenterColorDefaults.overflow;
+            if (okEl) okEl.value = presenterColors.ok || presenterColorDefaults.text.ok;
+            if (warnEl) warnEl.value = presenterColors.warning || presenterColorDefaults.text.warning;
+            if (overEl) overEl.value = presenterColors.overflow || presenterColorDefaults.text.overflow;
+            document.querySelectorAll('[data-presenter-color-text]').forEach((textEl) => {
+                const path = String(textEl.dataset.presenterColorText || '');
+                const [groupKey, semanticKey] = path.split('.');
+                const value = normalized[groupKey]?.[semanticKey] || presenterColorDefaults[groupKey]?.[semanticKey];
+                textEl.value = value;
+            });
             syncPresenterColorPickers();
         }
 
@@ -721,7 +768,7 @@
             const container = document.getElementById('branding-color-grid');
             if (!container || container.dataset.ready === '1') return;
             const groups = [
-                ['timerText', 'Timer Text'],
+                ['text', 'Timer Text'],
                 ['background', 'Background'],
                 ['indicator', 'Indicator'],
             ];
@@ -752,8 +799,23 @@
                 if (!res.ok) return;
                 const data = await res.json();
                 hydratePresenterColorInputs(data.presenterColors);
+                timeFormatPreference = String(data.timeFormat || 'auto');
+                const formatEl = document.getElementById('time-format-selector');
+                if (formatEl) formatEl.value = timeFormatPreference;
             } catch (error) {
                 console.warn('Display config load failed:', error.message);
+            }
+        }
+        async function saveTimeFormatPreference() {
+            const formatEl = document.getElementById('time-format-selector');
+            const nextFormat = String(formatEl?.value || 'auto');
+            try {
+                const res = await apiPost('/api/display-config', { timeFormat: nextFormat });
+                const data = await res.json();
+                timeFormatPreference = String((data.displayConfig || {}).timeFormat || 'auto');
+                if (formatEl) formatEl.value = timeFormatPreference;
+            } catch (error) {
+                alert(`Save failed: ${error.message}`);
             }
         }
 
@@ -761,28 +823,44 @@
             const okEl = document.getElementById('presenter-color-ok');
             const warnEl = document.getElementById('presenter-color-warning');
             const overEl = document.getElementById('presenter-color-overflow');
-            const payload = {
-                presenterColors: {
-                    ok: String(okEl?.value || presenterColorDefaults.ok).trim(),
-                    warning: String(warnEl?.value || presenterColorDefaults.warning).trim(),
-                    overflow: String(overEl?.value || presenterColorDefaults.overflow).trim(),
+            const grouped = {
+                text: {
+                    ok: String(okEl?.value || presenterColorDefaults.text.ok).trim(),
+                    warning: String(warnEl?.value || presenterColorDefaults.text.warning).trim(),
+                    overflow: String(overEl?.value || presenterColorDefaults.text.overflow).trim(),
                 },
+                background: {},
+                indicator: {},
+            };
+            document.querySelectorAll('[data-presenter-color-text]').forEach((textEl) => {
+                const path = String(textEl.dataset.presenterColorText || '');
+                const [groupKey, semanticKey] = path.split('.');
+                if (!groupKey || !semanticKey || !grouped[groupKey]) return;
+                grouped[groupKey][semanticKey] = String(textEl.value || presenterColorDefaults[groupKey]?.[semanticKey]).trim();
+            });
+            const payload = {
+                presenterColors: grouped,
             };
             try {
                 const res = await apiPost('/api/display-config', payload);
                 const data = await res.json();
                 hydratePresenterColorInputs((data.displayConfig || {}).presenterColors);
-                alert('Presenter colors saved.');
+                closeBrandingColorsModal();
             } catch (error) {
                 alert(`Save failed: ${error.message}`);
             }
         }
 
         async function loadPresenterColorDefaults() {
-            hydratePresenterColorInputs({ ...presenterColorDefaults });
+            const defaults = {
+                text: { ...presenterColorDefaults.text },
+                background: { ...presenterColorDefaults.background },
+                indicator: { ...presenterColorDefaults.indicator },
+            };
+            hydratePresenterColorInputs(defaults);
             try {
                 const res = await apiPost('/api/display-config', {
-                    presenterColors: { ...presenterColorDefaults },
+                    presenterColors: defaults,
                 });
                 const data = await res.json();
                 hydratePresenterColorInputs((data.displayConfig || {}).presenterColors);
@@ -801,23 +879,39 @@
             const hours = Math.floor((abs % 86400) / 3600);
             const mins = Math.floor((abs % 3600) / 60);
             const secs = abs % 60;
+            if (days === 0) return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
             const dayLabel = days === 1 ? 'day' : 'days';
             return `${days.toString().padStart(2, '0')} ${dayLabel} ${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         }
 
         async function setTargetMode() {
-            const value = document.getElementById('target-datetime').value;
-            if (!value) return alert('Please select date and time');
-            selectedTargetISO = new Date(value).toISOString();
+            if (targetModePreset === 'manual') {
+                const value = document.getElementById('target-datetime').value;
+                if (!value) return alert('Please select date and time');
+                selectedTargetISO = new Date(value).toISOString();
+                selectedTargetRepeatSeconds = 0;
+            } else if (targetModePreset === 'nextfull') {
+                selectedTargetISO = nextBoundaryIso(60);
+                selectedTargetRepeatSeconds = 3600;
+            } else if (targetModePreset === 'nexthalf') {
+                selectedTargetISO = nextBoundaryIso(30);
+                selectedTargetRepeatSeconds = 1800;
+            } else {
+                selectedTargetRepeatSeconds = 0;
+            }
             const displayBtn = document.getElementById('target-display-btn');
-            if (displayBtn) displayBtn.innerText = new Date(selectedTargetISO).toLocaleString();
-            closeTargetModal();
+            if (displayBtn) {
+                const modeLabel = targetModePreset === 'manual' ? formatDateTimeForUi(selectedTargetISO) : `Mode: ${document.getElementById(`target-mode-${targetModePreset}`)?.innerText || targetModePreset}`;
+                displayBtn.innerText = modeLabel;
+            }
+            await triggerTargetCountdown(true);
         }
 
-        async function triggerTargetCountdown() {
+        async function triggerTargetCountdown(closeOnSuccess = false) {
             if (!selectedTargetISO) return alert('Select date/time first');
             try {
-                await apiPost('/api/mode', { set: 'target', targetISO: selectedTargetISO });
+                await apiPost('/api/mode', { set: 'target', targetISO: selectedTargetISO, targetRepeatSeconds: selectedTargetRepeatSeconds || 0, targetPreset: targetModePreset });
+                if (closeOnSuccess) closeTargetModal();
             } catch (error) {
                 alert(`Failed to set target mode: ${error.message}`);
             }
@@ -1191,7 +1285,7 @@
         }
 
         socket.on('stateUpdate', async s => {
-            presenterColors = { ...presenterColorDefaults, ...(getPresenterTextColors(s.presenterColors) || {}) };
+            presenterColors = { ...presenterColorDefaults.text, ...(getPresenterTextColors(s.presenterColors) || {}) };
             document.getElementById('ip-display').innerText = s.ip;
             document.getElementById('current-ip-info').innerText = `Current Interface: ${s.ip} (Netmask: ${s.netmask || 'N/A'})`;
             
@@ -1211,9 +1305,18 @@
             const activeBtn = document.getElementById('mode-' + s.mode);
             if(activeBtn) { activeBtn.style.border = '1px solid #60a5fa'; activeBtn.style.color = '#60a5fa'; }
             if (s.targetISO) {
+                const targetModalOpen = document.getElementById('target-modal')?.classList.contains('active');
                 selectedTargetISO = s.targetISO;
+                if (!targetModalOpen) {
+                    targetModePreset = String(s.targetPreset || 'manual');
+                    if (!['manual', 'nextfull', 'nexthalf'].includes(targetModePreset)) targetModePreset = 'manual';
+                    setTargetModePreset(targetModePreset);
+                }
                 const displayBtn = document.getElementById('target-display-btn');
-                if (displayBtn) displayBtn.innerText = new Date(selectedTargetISO).toLocaleString();
+                if (displayBtn) {
+                    const modeLabel = targetModePreset === 'manual' ? formatDateTimeForUi(selectedTargetISO) : `Mode: ${document.getElementById(`target-mode-${targetModePreset}`)?.innerText || targetModePreset}`;
+                    displayBtn.innerText = modeLabel;
+                }
             }
 
             if (activeRundownHintStep !== null && s.currentIndex !== activeRundownHintStep) {
@@ -1366,6 +1469,7 @@
             hintPinToggle.addEventListener('change', () => localStorage.setItem('hintPinToPresenter', hintPinToggle.checked ? '1' : '0'));
             setRundownFlowMode(localStorage.getItem('rundownFlowMode') || 'overflow');
             document.getElementById('hint-threshold-seconds').value = getHintThreshold();
+            setTargetModePreset('manual');
             loadDisplayConfig();
             loadRundown();
         });
