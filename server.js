@@ -16,6 +16,7 @@ const { registerTimerRoutes } = require('./backend/lib/routes/timer');
 const { registerRundownRoutes } = require('./backend/lib/routes/rundown');
 const { registerDisplayRoutes } = require('./backend/lib/routes/display');
 const { registerSystemRoutes } = require('./backend/lib/routes/system');
+const { createRundownCsvParser } = require('./backend/lib/rundown-csv');
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -103,6 +104,7 @@ try {
 
 const timer = new TimerEngine({ ...bootData.state, logoData });
 const queue = new QueueEngine(bootData.rundown, timer.state.currentIndex || 0);
+const parseRundownCsv = createRundownCsvParser(queue);
 let displayConfig = sanitizeDisplayConfig(bootData.display || {});
 store.saveDisplay(displayConfig);
 
