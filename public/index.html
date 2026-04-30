@@ -459,6 +459,7 @@
             let rundownFlowMode = localStorage.getItem('rundownFlowMode') || 'overflow';
             let v2OnlyMode = false;
             let selectedTargetISO = null;
+            let selectedTargetRepeatSeconds = 0;
             let targetModePreset = 'manual';
             let timeFormatPreference = 'auto';
             const presenterColorDefaults = {
@@ -888,10 +889,15 @@
                 const value = document.getElementById('target-datetime').value;
                 if (!value) return alert('Please select date and time');
                 selectedTargetISO = new Date(value).toISOString();
+                selectedTargetRepeatSeconds = 0;
             } else if (targetModePreset === 'nextfull') {
                 selectedTargetISO = nextBoundaryIso(60);
+                selectedTargetRepeatSeconds = 3600;
             } else if (targetModePreset === 'nexthalf') {
                 selectedTargetISO = nextBoundaryIso(30);
+                selectedTargetRepeatSeconds = 1800;
+            } else {
+                selectedTargetRepeatSeconds = 0;
             }
             const displayBtn = document.getElementById('target-display-btn');
             if (displayBtn) {
@@ -904,7 +910,7 @@
         async function triggerTargetCountdown(closeOnSuccess = false) {
             if (!selectedTargetISO) return alert('Select date/time first');
             try {
-                await apiPost('/api/mode', { set: 'target', targetISO: selectedTargetISO, targetRepeatSeconds: 0, targetPreset: targetModePreset });
+                await apiPost('/api/mode', { set: 'target', targetISO: selectedTargetISO, targetRepeatSeconds: selectedTargetRepeatSeconds || 0, targetPreset: targetModePreset });
                 if (closeOnSuccess) closeTargetModal();
             } catch (error) {
                 alert(`Failed to set target mode: ${error.message}`);
