@@ -28,6 +28,9 @@ const DEFAULT_STATE = {
 };
 
 const DEFAULT_DISPLAY = {
+  schemaVersion: 1,
+  profileVersion: 1,
+  profile: 'program',
   keyMode: 'none',
   position: 4,
   scale: 1,

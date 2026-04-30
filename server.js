@@ -86,6 +86,20 @@ const logsDir = path.join(__dirname, 'logs');
 const actualsLogFile = path.join(logsDir, 'actuals.csv');
 let quickMessages = ['Wrap Up Now', 'Q&A Starting', '5 Minutes Left', 'Speak Up'];
 let logoData = '';
+const DISPLAY_SCHEMA_VERSION = 1;
+const DISPLAY_PROFILE_VERSION = 1;
+const DISPLAY_PROFILE_TO_LEGACY = {
+  program: { keyMode: 'none' },
+  chroma_dsk: { keyMode: 'chroma' },
+  luma_dsk: { keyMode: 'luma' },
+};
+const DISPLAY_LEGACY_TO_PROFILE = {
+  none: 'program',
+  small: 'program',
+  large: 'program',
+  chroma: 'chroma_dsk',
+  luma: 'luma_dsk',
+};
 
 try {
   if (fs.existsSync(messagesFile)) quickMessages = JSON.parse(fs.readFileSync(messagesFile, 'utf8'));
@@ -197,8 +211,23 @@ function sanitizeDisplayConfig(nextDisplay) {
     ...(bootData.display || {}),
     ...(nextDisplay || {}),
   };
+  const rawProfile = typeof merged.profile === 'string' ? merged.profile.trim() : '';
+  const legacyProfile = DISPLAY_LEGACY_TO_PROFILE[String(merged.keyMode || '').trim()] || 'program';
+  const profile = DISPLAY_PROFILE_TO_LEGACY[rawProfile] ? rawProfile : legacyProfile;
+  const profileLegacyMapping = DISPLAY_PROFILE_TO_LEGACY[profile] || DISPLAY_PROFILE_TO_LEGACY.program;
+  const rawSchemaVersion = Number(merged.schemaVersion);
+  const rawProfileVersion = Number(merged.profileVersion);
+
   return {
     ...merged,
+    schemaVersion: Number.isFinite(rawSchemaVersion) && rawSchemaVersion > 0
+      ? Math.floor(rawSchemaVersion)
+      : DISPLAY_SCHEMA_VERSION,
+    profileVersion: Number.isFinite(rawProfileVersion) && rawProfileVersion > 0
+      ? Math.floor(rawProfileVersion)
+      : DISPLAY_PROFILE_VERSION,
+    profile,
+    keyMode: profileLegacyMapping.keyMode,
     presenterColors: sanitizePresenterColors(merged.presenterColors),
   };
 }
@@ -222,7 +251,10 @@ function validateRundownSegment(segment, fieldName = 'segment') {
 function validateDisplayConfigPayload(payload) {
   const details = [];
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return { ok: false, details: ['payload must be an object'] };
-  if (payload.keyMode !== undefined && !enumField(payload.keyMode, 'keyMode', ['none', 'small', 'large']).ok) details.push('keyMode must be one of: none, small, large');
+  if (payload.schemaVersion !== undefined && !numberField(payload.schemaVersion, 'schemaVersion', { integer: true, min: 1 }).ok) details.push('schemaVersion must be an integer >= 1');
+  if (payload.profileVersion !== undefined && !numberField(payload.profileVersion, 'profileVersion', { integer: true, min: 1 }).ok) details.push('profileVersion must be an integer >= 1');
+  if (payload.profile !== undefined && !enumField(payload.profile, 'profile', ['program', 'chroma_dsk', 'luma_dsk']).ok) details.push('profile must be one of: program, chroma_dsk, luma_dsk');
+  if (payload.keyMode !== undefined && !enumField(payload.keyMode, 'keyMode', ['none', 'small', 'large', 'chroma', 'luma']).ok) details.push('keyMode must be one of: none, small, large, chroma, luma');
   if (payload.position !== undefined && !enumField(payload.position, 'position', ['top', 'center', 'bottom']).ok) details.push('position must be one of: top, center, bottom');
   if (payload.scale !== undefined && !numberField(payload.scale, 'scale', { min: 0.5, max: 3 }).ok) details.push('scale must be >= 0.5 and <= 3');
   if (payload.margin !== undefined && !numberField(payload.margin, 'margin', { integer: true, min: 0, max: 200 }).ok) details.push('margin must be >= 0 and <= 200');
