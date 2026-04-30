@@ -172,6 +172,18 @@
             </div>
 
             <div class="sys-group">
+                <h3>Time display format</h3>
+                <div class="sys-row">
+                    <select id="time-format-selector" class="sys-input">
+                        <option value="auto">Auto (browser/system)</option>
+                        <option value="24h">24-hour</option>
+                        <option value="12h">12-hour (AM/PM)</option>
+                    </select>
+                    <button onclick="saveTimeFormatPreference()" class="sys-btn">SAVE</button>
+                </div>
+            </div>
+
+            <div class="sys-group">
                 <h3>Event branding and color config</h3>
                 <p style="font-size:11px; color:var(--text-dim); margin-top:-8px;">Semantic presenter colors (ok, warning, overflow). Supports hex/rgb[a]/hsl[a].</p>
                 <div class="sys-row" style="align-items:center;">
@@ -216,17 +228,23 @@
             </div>
             <div class="sys-group">
                 <h3>Target Date & Time</h3>
+                <div class="preset-grid" style="grid-template-columns: repeat(5, 1fr); margin-bottom:10px;">
+                    <button id="target-mode-manual" onclick="setTargetModePreset('manual')" class="btn-preset active">To date/time</button>
+                    <button id="target-mode-next60" onclick="setTargetModePreset('next60')" class="btn-preset">Next 60</button>
+                    <button id="target-mode-next30" onclick="setTargetModePreset('next30')" class="btn-preset">Next 30</button>
+                    <button id="target-mode-nextfull" onclick="setTargetModePreset('nextfull')" class="btn-preset">Next full</button>
+                    <button id="target-mode-nexthalf" onclick="setTargetModePreset('nexthalf')" class="btn-preset">Next half</button>
+                </div>
                 <div class="sys-row">
                     <input type="datetime-local" id="target-datetime" class="sys-input">
                     <button onclick="setTargetMode()" class="sys-btn">SET</button>
                 </div>
                 <div class="sys-row" style="margin-top:10px;">
                     <label style="font-size:12px; color:var(--text-dim); min-width:92px;">Repeat</label>
-                    <select id="target-repeat-seconds" class="sys-input">
-                        <option value="0">No repeat</option>
-                        <option value="1800">Every 30 min</option>
-                        <option value="3600">Every 60 min</option>
-                    </select>
+                    <div class="preset-grid cols-2" style="margin-bottom:0; width:100%;">
+                        <button id="target-repeat-30" onclick="setTargetRepeat(1800)" class="btn-preset">Every 30 min</button>
+                        <button id="target-repeat-60" onclick="setTargetRepeat(3600)" class="btn-preset">Every 60 min</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -467,6 +485,8 @@
             let v2OnlyMode = false;
             let selectedTargetISO = null;
             let selectedTargetRepeatSeconds = 0;
+            let targetModePreset = 'manual';
+            let timeFormatPreference = 'auto';
             const presenterColorDefaults = {
                 text: { ok: '#22c55e', warning: '#ffffff', overflow: '#ffffff' },
                 background: { ok: '#000000', warning: '#f97316', overflow: '#ef4444' },
@@ -676,7 +696,27 @@
 
         function formatDateTimeForUi(dateLike) {
             const value = new Date(dateLike);
-            return value.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short', hour12: false });
+            const hour12 = timeFormatPreference === '12h' ? true : timeFormatPreference === '24h' ? false : undefined;
+            return value.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short', hour12 });
+        }
+        function setTargetRepeat(seconds) {
+            selectedTargetRepeatSeconds = Number(seconds) || 0;
+            document.getElementById('target-repeat-30')?.classList.toggle('active', selectedTargetRepeatSeconds === 1800);
+            document.getElementById('target-repeat-60')?.classList.toggle('active', selectedTargetRepeatSeconds === 3600);
+        }
+        function setTargetModePreset(mode) {
+            targetModePreset = mode || 'manual';
+            ['manual', 'next60', 'next30', 'nextfull', 'nexthalf'].forEach((key) => {
+                document.getElementById(`target-mode-${key}`)?.classList.toggle('active', targetModePreset === key);
+            });
+            const dateInput = document.getElementById('target-datetime');
+            if (dateInput) dateInput.disabled = targetModePreset !== 'manual';
+        }
+        function nextBoundaryIso(stepMinutes) {
+            const now = new Date();
+            const stepMs = stepMinutes * 60 * 1000;
+            const next = new Date(Math.ceil(now.getTime() / stepMs) * stepMs);
+            return next.toISOString();
         }
 
         async function checkAPStatus() {
@@ -784,8 +824,23 @@
                 if (!res.ok) return;
                 const data = await res.json();
                 hydratePresenterColorInputs(data.presenterColors);
+                timeFormatPreference = String(data.timeFormat || 'auto');
+                const formatEl = document.getElementById('time-format-selector');
+                if (formatEl) formatEl.value = timeFormatPreference;
             } catch (error) {
                 console.warn('Display config load failed:', error.message);
+            }
+        }
+        async function saveTimeFormatPreference() {
+            const formatEl = document.getElementById('time-format-selector');
+            const nextFormat = String(formatEl?.value || 'auto');
+            try {
+                const res = await apiPost('/api/display-config', { timeFormat: nextFormat });
+                const data = await res.json();
+                timeFormatPreference = String((data.displayConfig || {}).timeFormat || 'auto');
+                if (formatEl) formatEl.value = timeFormatPreference;
+            } catch (error) {
+                alert(`Save failed: ${error.message}`);
             }
         }
 
@@ -854,11 +909,23 @@
         }
 
         async function setTargetMode() {
-            const value = document.getElementById('target-datetime').value;
-            if (!value) return alert('Please select date and time');
-            selectedTargetISO = new Date(value).toISOString();
-            const repeatEl = document.getElementById('target-repeat-seconds');
-            selectedTargetRepeatSeconds = Number(repeatEl?.value || 0);
+            if (targetModePreset === 'manual') {
+                const value = document.getElementById('target-datetime').value;
+                if (!value) return alert('Please select date and time');
+                selectedTargetISO = new Date(value).toISOString();
+            } else if (targetModePreset === 'next60') {
+                selectedTargetISO = nextBoundaryIso(60);
+                setTargetRepeat(3600);
+            } else if (targetModePreset === 'next30') {
+                selectedTargetISO = nextBoundaryIso(30);
+                setTargetRepeat(1800);
+            } else if (targetModePreset === 'nextfull') {
+                selectedTargetISO = nextBoundaryIso(60);
+                setTargetRepeat(0);
+            } else if (targetModePreset === 'nexthalf') {
+                selectedTargetISO = nextBoundaryIso(30);
+                setTargetRepeat(0);
+            }
             const displayBtn = document.getElementById('target-display-btn');
             if (displayBtn) {
                 const repeatLabel = selectedTargetRepeatSeconds > 0 ? ` • repeats every ${Math.floor(selectedTargetRepeatSeconds / 60)}m` : '';
@@ -1266,8 +1333,7 @@
             if (s.targetISO) {
                 selectedTargetISO = s.targetISO;
                 selectedTargetRepeatSeconds = Number(s.targetRepeatSeconds || 0);
-                const repeatEl = document.getElementById('target-repeat-seconds');
-                if (repeatEl) repeatEl.value = String(selectedTargetRepeatSeconds);
+                setTargetRepeat(selectedTargetRepeatSeconds);
                 const displayBtn = document.getElementById('target-display-btn');
                 if (displayBtn) {
                     const repeatLabel = selectedTargetRepeatSeconds > 0 ? ` • repeats every ${Math.floor(selectedTargetRepeatSeconds / 60)}m` : '';
@@ -1425,6 +1491,7 @@
             hintPinToggle.addEventListener('change', () => localStorage.setItem('hintPinToPresenter', hintPinToggle.checked ? '1' : '0'));
             setRundownFlowMode(localStorage.getItem('rundownFlowMode') || 'overflow');
             document.getElementById('hint-threshold-seconds').value = getHintThreshold();
+            setTargetModePreset('manual');
             loadDisplayConfig();
             loadRundown();
         });
