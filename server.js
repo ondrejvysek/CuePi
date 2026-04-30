@@ -239,8 +239,8 @@ function sanitizePresenterColors(colors) {
   };
 }
 
-const DISPLAY_SCHEMA_VERSION = 1;
-const DISPLAY_PROFILE_VERSION = 1;
+//const DISPLAY_SCHEMA_VERSION = 1;
+//const DISPLAY_PROFILE_VERSION = 1;
 const DISPLAY_PROFILE_TO_LEGACY = {
   program: { keyMode: 'none' },
   chroma_dsk: { keyMode: 'chroma' },
