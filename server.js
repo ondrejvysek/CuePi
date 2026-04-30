@@ -17,30 +17,15 @@ app.use(express.json({ limit: '10mb' }));
 const store = new StateStore();
 const bootData = store.init();
 const DEFAULT_PRESENTER_COLORS = {
-  timerText: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
+  text: { ok: '#22c55e', warning: '#ffffff', overflow: '#ffffff' },
   background: { ok: '#000000', warning: '#f97316', overflow: '#ef4444' },
   indicator: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
 };
-const DEFAULT_PRESENTER_COLOR_GROUPS = {
-  text: { ...DEFAULT_PRESENTER_COLORS },
-  background: { ...DEFAULT_PRESENTER_COLORS },
-  indicator: { ...DEFAULT_PRESENTER_COLORS },
-};
-const DEFAULT_PRESENTER_COLOR_GROUPS = {
-  text: { ...DEFAULT_PRESENTER_COLORS },
-  background: { ...DEFAULT_PRESENTER_COLORS },
-  indicator: { ...DEFAULT_PRESENTER_COLORS },
-};
-const DEFAULT_PRESENTER_COLOR_GROUPS = {
-  text: { ...DEFAULT_PRESENTER_COLORS },
-  background: { ...DEFAULT_PRESENTER_COLORS },
-  indicator: { ...DEFAULT_PRESENTER_COLORS },
-};
 function defaultPresenterColorGroups() {
   return {
-    text: { ...DEFAULT_PRESENTER_COLORS },
-    background: { ...DEFAULT_PRESENTER_COLORS },
-    indicator: { ...DEFAULT_PRESENTER_COLORS },
+    text: { ...DEFAULT_PRESENTER_COLORS.text },
+    background: { ...DEFAULT_PRESENTER_COLORS.background },
+    indicator: { ...DEFAULT_PRESENTER_COLORS.indicator },
   };
 }
 
@@ -204,10 +189,11 @@ function sanitizePresenterColors(colors) {
     };
   }
 
+  const fallbackText = input.timerText || input;
   return {
-    timerText: sanitizeSemanticSet(input.timerText, legacy),
-    background: sanitizeSemanticSet(input.background, DEFAULT_PRESENTER_COLORS.background),
-    indicator: sanitizeSemanticSet(input.indicator, DEFAULT_PRESENTER_COLORS.indicator),
+    text: sanitizeTriplet(fallbackText, defaultPresenterColorGroups().text),
+    background: sanitizeTriplet(input.background || {}, defaultPresenterColorGroups().background),
+    indicator: sanitizeTriplet(input.indicator || {}, defaultPresenterColorGroups().indicator),
   };
 }
 
@@ -478,10 +464,17 @@ app.post('/api/mode', requireAdmin, (req, res) => {
   const mode = req.body && req.body.set;
   if (mode === 'target') {
     const targetISO = req.body && req.body.targetISO;
+    const repeatSeconds = Number((req.body && req.body.targetRepeatSeconds) || 0);
+    const targetPreset = String((req.body && req.body.targetPreset) || 'manual');
     if (!targetISO || Number.isNaN(new Date(targetISO).getTime())) {
       return structuredError(res, 400, 'Invalid payload', 'targetISO is required for target mode');
     }
+    if (!Number.isFinite(repeatSeconds) || repeatSeconds < 0) {
+      return structuredError(res, 400, 'Invalid payload', 'targetRepeatSeconds must be >= 0');
+    }
     timer.state.targetISO = targetISO;
+    timer.state.targetRepeatSeconds = Math.floor(repeatSeconds);
+    timer.state.targetPreset = ['manual', 'nextfull', 'nexthalf'].includes(targetPreset) ? targetPreset : 'manual';
   }
   if (!timer.setMode(mode)) return structuredError(res, 400, 'Invalid payload', 'Invalid mode');
   persistState();
@@ -492,8 +485,13 @@ legacyRoute('/api/mode', (req, res) => {
   const mode = req.query && req.query.set;
   if (mode === 'target') {
     const targetISO = req.query && req.query.targetISO;
+    const repeatSeconds = Number((req.query && req.query.targetRepeatSeconds) || 0);
+    const targetPreset = String((req.query && req.query.targetPreset) || 'manual');
     if (!targetISO || Number.isNaN(new Date(targetISO).getTime())) return res.status(400).send('Missing targetISO');
+    if (!Number.isFinite(repeatSeconds) || repeatSeconds < 0) return res.status(400).send('Invalid targetRepeatSeconds');
     timer.state.targetISO = targetISO;
+    timer.state.targetRepeatSeconds = Math.floor(repeatSeconds);
+    timer.state.targetPreset = ['manual', 'nextfull', 'nexthalf'].includes(targetPreset) ? targetPreset : 'manual';
   }
   if (!timer.setMode(mode)) return res.status(400).send('Invalid Mode');
   persistState();
