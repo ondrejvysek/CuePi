@@ -86,6 +86,20 @@ const logsDir = path.join(__dirname, 'logs');
 const actualsLogFile = path.join(logsDir, 'actuals.csv');
 let quickMessages = ['Wrap Up Now', 'Q&A Starting', '5 Minutes Left', 'Speak Up'];
 let logoData = '';
+const DISPLAY_SCHEMA_VERSION = 1;
+const DISPLAY_PROFILE_VERSION = 1;
+const DISPLAY_PROFILE_TO_LEGACY = {
+  program: { keyMode: 'none' },
+  chroma_dsk: { keyMode: 'chroma' },
+  luma_dsk: { keyMode: 'luma' },
+};
+const DISPLAY_LEGACY_TO_PROFILE = {
+  none: 'program',
+  small: 'program',
+  large: 'program',
+  chroma: 'chroma_dsk',
+  luma: 'luma_dsk',
+};
 
 function displaySchemaVersion() { return 1; }
 function displayProfileVersion() { return 1; }
@@ -224,6 +238,21 @@ function sanitizePresenterColors(colors) {
     indicator: sanitizeTriplet(input.indicator || {}, defaultPresenterColorGroups().indicator),
   };
 }
+
+const DISPLAY_SCHEMA_VERSION = 1;
+const DISPLAY_PROFILE_VERSION = 1;
+const DISPLAY_PROFILE_TO_LEGACY = {
+  program: { keyMode: 'none' },
+  chroma_dsk: { keyMode: 'chroma' },
+  luma_dsk: { keyMode: 'luma' },
+};
+const DISPLAY_LEGACY_TO_PROFILE = {
+  none: 'program',
+  small: 'program',
+  large: 'program',
+  chroma: 'chroma_dsk',
+  luma: 'luma_dsk',
+};
 
 function sanitizeDisplayConfig(nextDisplay) {
   const merged = {
