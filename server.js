@@ -31,6 +31,11 @@ const DEFAULT_PRESENTER_COLOR_GROUPS = {
   background: { ...DEFAULT_PRESENTER_COLORS },
   indicator: { ...DEFAULT_PRESENTER_COLORS },
 };
+const DEFAULT_PRESENTER_COLOR_GROUPS = {
+  text: { ...DEFAULT_PRESENTER_COLORS },
+  background: { ...DEFAULT_PRESENTER_COLORS },
+  indicator: { ...DEFAULT_PRESENTER_COLORS },
+};
 
 if (!bootData.config.uuid) {
   bootData.config.uuid = crypto.randomUUID();
@@ -154,6 +159,12 @@ function parseIntField(value, fieldName, opts = {}) {
   return { value: val };
 }
 
+function reqValue(req, key) {
+  if (req && req.body && req.body[key] !== undefined) return req.body[key];
+  if (req && req.query && req.query[key] !== undefined) return req.query[key];
+  return undefined;
+}
+
 function isAcceptedColorFormat(value) {
   if (typeof value !== 'string') return false;
   const color = value.trim();
@@ -166,10 +177,14 @@ function isAcceptedColorFormat(value) {
 
 function sanitizePresenterColors(colors) {
   const input = (colors && typeof colors === 'object') ? colors : {};
+  const getColorField = (obj, key) => {
+    if (!obj || typeof obj !== 'object') return undefined;
+    return obj[key];
+  };
   const sanitizeTriplet = (triplet, fallback) => ({
-    ok: isAcceptedColorFormat(triplet?.ok) ? String(triplet.ok).trim() : fallback.ok,
-    warning: isAcceptedColorFormat(triplet?.warning) ? String(triplet.warning).trim() : fallback.warning,
-    overflow: isAcceptedColorFormat(triplet?.overflow) ? String(triplet.overflow).trim() : fallback.overflow,
+    ok: isAcceptedColorFormat(getColorField(triplet, 'ok')) ? String(getColorField(triplet, 'ok')).trim() : fallback.ok,
+    warning: isAcceptedColorFormat(getColorField(triplet, 'warning')) ? String(getColorField(triplet, 'warning')).trim() : fallback.warning,
+    overflow: isAcceptedColorFormat(getColorField(triplet, 'overflow')) ? String(getColorField(triplet, 'overflow')).trim() : fallback.overflow,
   });
 
   const hasGrouped = input.text || input.background || input.indicator;
@@ -369,7 +384,7 @@ app.post('/api/display-config', (req, res) => {
     res.json({ ok: true, displayConfig });
   } catch (error) {
     console.error('Display config save failed:', error);
-    structuredError(res, 500, 'Display config save failed', String(error?.message || error));
+    structuredError(res, 500, 'Display config save failed', String((error && error.message) || error));
   }
 });
 
@@ -413,7 +428,7 @@ legacyRoute('/api/toggle_playback', (req, res) => {
 });
 
 function handleResetInput(req) {
-  const raw = req.body?.sec ?? req.query?.sec;
+  const raw = reqValue(req, 'sec');
   return parseIntField(raw ?? timer.state.durationSeconds, 'sec', { min: 0, max: 86400 });
 }
 
@@ -435,7 +450,7 @@ legacyRoute('/api/reset', (req, res) => {
 }, { auth: true });
 
 app.post('/api/add', (req, res) => {
-  const parsed = parseIntField(req.body?.sec ?? req.query?.sec ?? 0, 'sec', { min: -7200, max: 7200 });
+  const parsed = parseIntField(reqValue(req, 'sec') ?? 0, 'sec', { min: -7200, max: 7200 });
   if (parsed.error) return structuredError(res, 400, 'Invalid payload', parsed.error);
   timer.add(parsed.value);
   persistState();
@@ -443,7 +458,7 @@ app.post('/api/add', (req, res) => {
   res.json({ ok: true, status: 'Adjusted' });
 });
 legacyRoute('/api/add', (req, res) => {
-  const parsed = parseIntField(req.query?.sec ?? 0, 'sec', { min: -7200, max: 7200 });
+  const parsed = parseIntField((req.query && req.query.sec) ?? 0, 'sec', { min: -7200, max: 7200 });
   if (parsed.error) return res.status(400).send(parsed.error);
   timer.add(parsed.value);
   persistState();
@@ -452,9 +467,9 @@ legacyRoute('/api/add', (req, res) => {
 });
 
 app.post('/api/mode', requireAdmin, (req, res) => {
-  const mode = req.body?.set;
+  const mode = req.body && req.body.set;
   if (mode === 'target') {
-    const targetISO = req.body?.targetISO;
+    const targetISO = req.body && req.body.targetISO;
     if (!targetISO || Number.isNaN(new Date(targetISO).getTime())) {
       return structuredError(res, 400, 'Invalid payload', 'targetISO is required for target mode');
     }
@@ -466,9 +481,9 @@ app.post('/api/mode', requireAdmin, (req, res) => {
   res.json({ ok: true, status: 'Mode updated' });
 });
 legacyRoute('/api/mode', (req, res) => {
-  const mode = req.query?.set;
+  const mode = req.query && req.query.set;
   if (mode === 'target') {
-    const targetISO = req.query?.targetISO;
+    const targetISO = req.query && req.query.targetISO;
     if (!targetISO || Number.isNaN(new Date(targetISO).getTime())) return res.status(400).send('Missing targetISO');
     timer.state.targetISO = targetISO;
   }
@@ -492,8 +507,8 @@ legacyRoute('/api/message/toggle', (req, res) => {
 });
 
 app.post('/api/message/set', (req, res) => {
-  const text = req.body?.text ?? req.query?.text ?? '';
-  const sourceRaw = String(req.body?.source ?? req.query?.source ?? 'manual');
+  const text = reqValue(req, 'text') ?? '';
+  const sourceRaw = String(reqValue(req, 'source') ?? 'manual');
   const source = ['manual', 'auto_rundown', 'quick_message'].includes(sourceRaw) ? sourceRaw : 'manual';
   timer.setMessage(String(text).slice(0, 280), source);
   persistState();
@@ -508,7 +523,7 @@ legacyRoute('/api/message/set', (req, res) => {
 });
 
 app.post('/api/message/trigger', (req, res) => {
-  const parsed = parseIntField(req.body?.index ?? req.query?.index, 'index', { min: 0, max: quickMessages.length - 1 });
+  const parsed = parseIntField(reqValue(req, 'index'), 'index', { min: 0, max: quickMessages.length - 1 });
   if (parsed.error) return structuredError(res, 400, 'Invalid payload', parsed.error);
   timer.setMessage(quickMessages[parsed.value], 'quick_message');
   timer.state.showMessage = true;
@@ -569,7 +584,7 @@ app.post('/api/system/update', requireAdmin, (req, res) => {
 });
 
 app.post('/api/system/hostname', requireAdmin, (req, res) => {
-  const name = req.body?.name;
+  const name = req.body && req.body.name;
   if (!name || typeof name !== 'string' || !/^[a-zA-Z0-9-]{1,63}$/.test(name)) {
     return structuredError(res, 400, 'Invalid payload', 'name must be 1-63 chars [a-zA-Z0-9-]');
   }
@@ -580,7 +595,7 @@ app.post('/api/system/hostname', requireAdmin, (req, res) => {
 });
 
 app.post('/api/system/ap', requireAdmin, (req, res) => {
-  const action = req.body?.action;
+  const action = req.body && req.body.action;
   if (!['on', 'off'].includes(action)) return structuredError(res, 400, 'Invalid payload', 'action must be on/off');
   const desired = action === 'on' ? 'up' : 'down';
   runCommand('sudo', ['nmcli', 'con', desired, apConnectionName], (error) => {
@@ -617,8 +632,8 @@ app.post('/api/system/wifi/scan', requireAdmin, (req, res) => {
 });
 
 app.post('/api/system/wifi/connect', requireAdmin, (req, res) => {
-  const ssid = req.body?.ssid;
-  const password = req.body?.password;
+  const ssid = req.body && req.body.ssid;
+  const password = req.body && req.body.password;
   if (!ssid || typeof ssid !== 'string' || ssid.length > 128) {
     return structuredError(res, 400, 'Invalid payload', 'ssid is required (1-128 chars)');
   }
@@ -659,7 +674,7 @@ app.post('/api/system/wifi/static', requireAdmin, (req, res) => {
 });
 
 app.post('/api/messages/add', requireAdmin, (req, res) => {
-  const text = String(req.body?.text || '').trim();
+  const text = String((req.body && req.body.text) || '').trim();
   if (!text) return structuredError(res, 400, 'Invalid payload', 'text is required');
   if (!quickMessages.includes(text)) {
     quickMessages.push(text);
@@ -679,7 +694,7 @@ legacyRoute('/api/messages/add', (req, res) => {
 }, { auth: true });
 
 app.post('/api/messages/remove', requireAdmin, (req, res) => {
-  const parsed = parseIntField(req.body?.index, 'index', { min: 0, max: quickMessages.length - 1 });
+  const parsed = parseIntField(req.body && req.body.index, 'index', { min: 0, max: quickMessages.length - 1 });
   if (parsed.error) return structuredError(res, 400, 'Invalid payload', parsed.error);
   quickMessages.splice(parsed.value, 1);
   saveMessages();
@@ -701,7 +716,7 @@ app.get('/api/rundown', (req, res) => {
 });
 
 app.post('/api/rundown/set', requireAdmin, (req, res) => {
-  const rundown = req.body?.rundown;
+  const rundown = req.body && req.body.rundown;
   if (!Array.isArray(rundown)) return structuredError(res, 400, 'Invalid payload', 'rundown must be an array');
 
   queue.setRundown(rundown);
@@ -714,8 +729,8 @@ app.post('/api/rundown/set', requireAdmin, (req, res) => {
 });
 
 app.post('/api/rundown/import', requireAdmin, (req, res) => {
-  const csv = String(req.body?.csv || '');
-  const importMode = req.body?.importMode === 'append' ? 'append' : 'replace';
+  const csv = String((req.body && req.body.csv) || '');
+  const importMode = (req.body && req.body.importMode) === 'append' ? 'append' : 'replace';
   if (!csv.trim()) return structuredError(res, 400, 'Invalid payload', 'csv is required');
   const parsed = parseRundownCsv(csv);
   if (!parsed.segments.length) return structuredError(res, 400, 'CSV import failed', parsed.warnings);
@@ -728,7 +743,7 @@ app.post('/api/rundown/import', requireAdmin, (req, res) => {
 });
 
 app.post('/api/rundown/item/add', requireAdmin, (req, res) => {
-  const segment = req.body?.segment;
+  const segment = req.body && req.body.segment;
   if (!segment || typeof segment !== 'object') return structuredError(res, 400, 'Invalid payload', 'segment is required');
   queue.addSegment(segment);
   persistRundown();
@@ -737,9 +752,9 @@ app.post('/api/rundown/item/add', requireAdmin, (req, res) => {
 });
 
 app.post('/api/rundown/item/update', requireAdmin, (req, res) => {
-  const parsed = parseIntField(req.body?.index, 'index', { min: 0, max: queue.rundown.length - 1 });
+  const parsed = parseIntField(req.body && req.body.index, 'index', { min: 0, max: queue.rundown.length - 1 });
   if (parsed.error) return structuredError(res, 400, 'Invalid payload', parsed.error);
-  const segment = req.body?.segment;
+  const segment = req.body && req.body.segment;
   if (!segment || typeof segment !== 'object') return structuredError(res, 400, 'Invalid payload', 'segment is required');
   const updated = queue.updateSegment(parsed.value, segment);
   persistRundown();
@@ -748,7 +763,7 @@ app.post('/api/rundown/item/update', requireAdmin, (req, res) => {
 });
 
 app.post('/api/rundown/item/remove', requireAdmin, (req, res) => {
-  const parsed = parseIntField(req.body?.index, 'index', { min: 0, max: queue.rundown.length - 1 });
+  const parsed = parseIntField(req.body && req.body.index, 'index', { min: 0, max: queue.rundown.length - 1 });
   if (parsed.error) return structuredError(res, 400, 'Invalid payload', parsed.error);
   const removed = queue.removeSegment(parsed.value);
   timer.state.currentIndex = queue.currentIndex;
