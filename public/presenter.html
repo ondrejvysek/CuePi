@@ -149,6 +149,7 @@
             const hours = Math.floor((abs % 86400) / 3600);
             const mins = Math.floor((abs % 3600) / 60);
             const secs = abs % 60;
+            if (days === 0) return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
             const dayLabel = days === 1 ? 'day' : 'days';
             return `${days.toString().padStart(2, '0')} ${dayLabel} ${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         }
