@@ -921,13 +921,14 @@
                 const modeLabel = targetModePreset === 'manual' ? formatDateTimeForUi(selectedTargetISO) : `Mode: ${document.getElementById(`target-mode-${targetModePreset}`)?.innerText || targetModePreset}`;
                 displayBtn.innerText = modeLabel;
             }
-            await triggerTargetCountdown();
+            await triggerTargetCountdown(true);
         }
 
-        async function triggerTargetCountdown(skipValidation = false) {
+        async function triggerTargetCountdown(closeOnSuccess = false) {
             if (!selectedTargetISO) return alert('Select date/time first');
             try {
                 await apiPost('/api/mode', { set: 'target', targetISO: selectedTargetISO, targetRepeatSeconds: 0, targetPreset: targetModePreset });
+                if (closeOnSuccess) closeTargetModal();
             } catch (error) {
                 alert(`Failed to set target mode: ${error.message}`);
             }
@@ -1321,10 +1322,13 @@
             const activeBtn = document.getElementById('mode-' + s.mode);
             if(activeBtn) { activeBtn.style.border = '1px solid #60a5fa'; activeBtn.style.color = '#60a5fa'; }
             if (s.targetISO) {
+                const targetModalOpen = document.getElementById('target-modal')?.classList.contains('active');
                 selectedTargetISO = s.targetISO;
-                targetModePreset = String(s.targetPreset || 'manual');
-                if (!['manual', 'nextfull', 'nexthalf'].includes(targetModePreset)) targetModePreset = 'manual';
-                setTargetModePreset(targetModePreset);
+                if (!targetModalOpen) {
+                    targetModePreset = String(s.targetPreset || 'manual');
+                    if (!['manual', 'nextfull', 'nexthalf'].includes(targetModePreset)) targetModePreset = 'manual';
+                    setTargetModePreset(targetModePreset);
+                }
                 const displayBtn = document.getElementById('target-display-btn');
                 if (displayBtn) {
                     const modeLabel = targetModePreset === 'manual' ? formatDateTimeForUi(selectedTargetISO) : `Mode: ${document.getElementById(`target-mode-${targetModePreset}`)?.innerText || targetModePreset}`;
