@@ -189,10 +189,11 @@ function sanitizePresenterColors(colors) {
     };
   }
 
+  const fallbackText = input.timerText || input;
   return {
-    timerText: sanitizeSemanticSet(input.timerText, legacy),
-    background: sanitizeSemanticSet(input.background, DEFAULT_PRESENTER_COLORS.background),
-    indicator: sanitizeSemanticSet(input.indicator, DEFAULT_PRESENTER_COLORS.indicator),
+    text: sanitizeTriplet(fallbackText, defaultPresenterColorGroups().text),
+    background: sanitizeTriplet(input.background || {}, defaultPresenterColorGroups().background),
+    indicator: sanitizeTriplet(input.indicator || {}, defaultPresenterColorGroups().indicator),
   };
 }
 
