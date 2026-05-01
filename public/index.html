@@ -103,6 +103,7 @@
         .mode-toggle button.active { background:#14b8a6; color:#042f2e; }
 
         .hidden { display: none; }
+        .anchor-active { outline: 2px solid #22c55e !important; box-shadow: 0 0 0 2px rgba(34,197,94,0.25) inset; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
@@ -185,18 +186,6 @@
                         <option value="12h">12-hour (AM/PM)</option>
                     </select>
                     <button onclick="saveTimeFormatPreference()" class="sys-btn">SAVE</button>
-                </div>
-            </div>
-
-            <div class="sys-group">
-                <h3>Display profile</h3>
-                <div class="sys-row">
-                    <select id="display-profile-selector" class="sys-input">
-                        <option value="program">Program (safe)</option>
-                        <option value="chroma_dsk">Chroma DSK (green key background)</option>
-                        <option value="luma_dsk">Luma DSK (black/white luminance style)</option>
-                    </select>
-                    <button onclick="saveDisplayProfile()" class="sys-btn">SAVE</button>
                 </div>
             </div>
 
@@ -297,11 +286,82 @@
         </div>
     </div>
 
+    <div id="presenter-out-modal" class="modal-overlay">
+        <div class="modal-content" style="width:min(760px,96vw);">
+            <div class="modal-title">
+                PRESENTER OUT / DSK
+                <button onclick="closePresenterOutModal()" style="background:none; border:none; color:white; font-size:20px; cursor:pointer;">×</button>
+            </div>
+            <div class="sys-group">
+                <h3>Display profile</h3>
+                <p style="font-size:11px; color:var(--text-dim); margin-top:-8px;">Choose how presenter output is keyed/composited for program/DSK workflows.</p>
+                <div class="sys-row">
+                    <select id="display-profile-selector" class="sys-input">
+                        <option value="program">Program (safe)</option>
+                        <option value="chroma_dsk">Chroma DSK (green key background)</option>
+                        <option value="luma_dsk">Luma DSK (black/white luminance style)</option>
+                    </select>
+                    <button onclick="saveDisplayProfile()" class="sys-btn">SAVE</button>
+                </div>
+                <div class="sys-row" style="margin-top:10px; margin-bottom:0;">
+                    <button onclick="window.open('/presenter.html', '_blank')" class="sys-btn" style="flex:1; background:#334155;">OPEN CLASSIC PRESENTER</button>
+                    <button onclick="window.open('/presenter-dsk.html', '_blank')" class="sys-btn" style="flex:1;">OPEN DSK PRESENTER</button>
+                </div>
+            </div>
+            <div class="sys-group" style="margin-bottom:0;">
+                <h3>Presenter placement</h3>
+                <div class="sys-row" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;">
+                    <button data-anchor="0" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(0)">↖ Top Left</button>
+                    <button data-anchor="1" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(1)">↑ Top</button>
+                    <button data-anchor="2" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(2)">↗ Top Right</button>
+                    <button data-anchor="3" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(3)">← Left</button>
+                    <button data-anchor="4" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(4)">• Center</button>
+                    <button data-anchor="5" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(5)">→ Right</button>
+                    <button data-anchor="6" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(6)">↙ Bottom Left</button>
+                    <button data-anchor="7" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(7)">↓ Bottom</button>
+                    <button data-anchor="8" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(8)">↘ Bottom Right</button>
+                </div>
+                <div class="sys-row" style="margin-top:10px;">
+                    <label style="flex:1; font-size:11px; color:var(--text-dim);">Scale
+                        <input id="presenter-scale" type="range" min="0.5" max="3" step="0.05" class="sys-input">
+                    </label>
+                    <label style="flex:1; font-size:11px; color:var(--text-dim);">Margin
+                        <input id="presenter-margin" type="range" min="0" max="200" step="1" class="sys-input">
+                    </label>
+                </div>
+                <div class="sys-row" style="margin-top:6px;">
+                    <span id="presenter-placement-readout" style="font-size:11px; color:var(--text-dim);">Anchor 4 · Scale 1.00 · Margin 24px</span>
+                    <span id="presenter-placement-status" style="font-size:11px; color:#86efac; display:none;">Applied ✓</span>
+                    <button onclick="savePresenterPlacement()" class="sys-btn">SAVE</button>
+                </div>
+            </div>
+            <div class="sys-group" style="margin-top:12px; margin-bottom:0;">
+                <h3>DSK branding</h3>
+                <div class="sys-row">
+                    <input id="dsk-panel-color" type="color" class="sys-input" style="max-width:80px;">
+                    <input id="dsk-text-ok" type="color" class="sys-input" style="max-width:80px;">
+                    <input id="dsk-text-warning" type="color" class="sys-input" style="max-width:80px;">
+                    <input id="dsk-text-overflow" type="color" class="sys-input" style="max-width:80px;">
+                </div>
+                <div class="sys-row">
+                    <label style="flex:1; font-size:11px; color:var(--text-dim);">Radius <input id="dsk-panel-radius" type="range" min="0" max="80" step="1" class="sys-input"></label>
+                    <label style="flex:1; font-size:11px; color:var(--text-dim);">Pad VH <input id="dsk-panel-pad-vh" type="range" min="0" max="8" step="0.1" class="sys-input"></label>
+                    <label style="flex:1; font-size:11px; color:var(--text-dim);">Pad VW <input id="dsk-panel-pad-vw" type="range" min="0" max="8" step="0.1" class="sys-input"></label>
+                </div>
+                <div class="sys-row" style="margin-bottom:0;">
+                    <label style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-dim);"><input type="checkbox" id="dsk-panel-semantic-bg" checked> Semantic box background</label>
+                    <button onclick="saveDskBranding()" class="sys-btn">SAVE DSK BRANDING</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <header>
             <div style="font-weight: 900; font-size: 24px;">CuePi <span style="font-size: 12px; opacity: 0.5; font-weight: normal;">Moderator</span></div>
             <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
                 <div class="ip-badge" id="ip-display">Connecting...</div>
+                <button onclick="openPresenterOutModal()" class="btn-header-danger" style="background:var(--card); color:#86efac; border-color:rgba(34,197,94,0.45);">🟩 PRESENTER OUT</button>
                 <button onclick="openConfigTransferModal()" class="btn-header-danger" style="background:var(--card); color:#93c5fd; border-color:rgba(96,165,250,0.4);">⤴ CONFIG</button>
                 <button id="btn-audio" onclick="toggleAudio()" class="btn-header-danger" style="color:var(--text-dim); border-color:var(--border);">🔕 AUDIO OFF</button>
                 <button onclick="openSettings()" class="btn-header-danger" style="background:var(--card); color:white; border-color:var(--border);">⚙️ SETTINGS</button>
@@ -500,6 +560,9 @@
                 indicator: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
             };
             let presenterColors = { ...presenterColorDefaults.text };
+            let presenterPosition = 4;
+            let presenterScale = 1;
+            let presenterMargin = 24;
             const presenterBlackValues = new Set(['#000', '#000000', 'black', 'rgb(0,0,0)', 'rgb(0, 0, 0)']);
             function getPresenterTextColors(colors = {}) {
                 if (colors && typeof colors === 'object' && colors.text && typeof colors.text === 'object') {
@@ -514,6 +577,24 @@
 
         function getHintThreshold() {
             return Number.isFinite(hintThresholdSeconds) && hintThresholdSeconds > 0 ? Math.floor(hintThresholdSeconds) : 60;
+        }
+
+        function updatePresenterPlacementReadout() {
+            const readout = document.getElementById('presenter-placement-readout');
+            if (readout) readout.innerText = `Anchor ${presenterPosition} · Scale ${Number(presenterScale).toFixed(2)} · Margin ${presenterMargin}px`;
+            document.querySelectorAll('[data-anchor]').forEach((btn) => {
+                btn.classList.toggle('anchor-active', Number(btn.dataset.anchor) === Number(presenterPosition));
+            });
+            const scaleEl = document.getElementById('presenter-scale');
+            const marginEl = document.getElementById('presenter-margin');
+            if (scaleEl) scaleEl.value = String(presenterScale);
+            if (marginEl) marginEl.value = String(presenterMargin);
+        }
+
+        function setPresenterAnchor(anchor) {
+            const numericAnchor = Number(anchor);
+            presenterPosition = (Number.isInteger(numericAnchor) && numericAnchor >= 0 && numericAnchor <= 8) ? numericAnchor : 4;
+            updatePresenterPlacementReadout();
         }
 
         function saveHintThreshold() {
@@ -632,6 +713,8 @@
 
         function openConfigTransferModal() { document.getElementById('config-transfer-modal').classList.add('active'); }
         function closeConfigTransferModal() { document.getElementById('config-transfer-modal').classList.remove('active'); }
+        function openPresenterOutModal() { document.getElementById('presenter-out-modal').classList.add('active'); }
+        function closePresenterOutModal() { document.getElementById('presenter-out-modal').classList.remove('active'); }
 
         async function exportSystemConfig() {
             try {
@@ -895,6 +978,21 @@
                 const profileEl = document.getElementById('display-profile-selector');
                 if (formatEl) formatEl.value = timeFormatPreference;
                 if (profileEl) profileEl.value = String(data.profile || 'program');
+                presenterPosition = Number.isInteger(Number(data.position)) ? Number(data.position) : 4;
+                presenterScale = Number.isFinite(Number(data.scale)) ? Number(data.scale) : 1;
+                presenterMargin = Number.isFinite(Number(data.margin)) ? Number(data.margin) : 24;
+                updatePresenterPlacementReadout();
+                const d = data.dskBranding || {};
+                const set = (id, val) => { const el = document.getElementById(id); if (el != null && val != null) el.value = String(val); };
+                set('dsk-panel-color', d.panelColor || '#111111');
+                set('dsk-text-ok', (d.text || {}).ok || '#ffffff');
+                set('dsk-text-warning', (d.text || {}).warning || '#f97316');
+                set('dsk-text-overflow', (d.text || {}).overflow || '#ef4444');
+                set('dsk-panel-radius', d.panelRadius ?? 28);
+                set('dsk-panel-pad-vh', d.panelPaddingVh ?? 1.6);
+                set('dsk-panel-pad-vw', d.panelPaddingVw ?? 2.2);
+                const sem = document.getElementById('dsk-panel-semantic-bg');
+                if (sem) sem.checked = d.panelSemanticBackground !== false;
             } catch (error) {
                 console.warn('Display config load failed:', error.message);
             }
@@ -920,6 +1018,57 @@
                 const data = await res.json();
                 const savedProfile = String((data.displayConfig || {}).profile || 'program');
                 if (profileEl) profileEl.value = savedProfile;
+            } catch (error) {
+                alert(`Save failed: ${error.message}`);
+            }
+        }
+
+        async function savePresenterPlacement() {
+            const scaleEl = document.getElementById('presenter-scale');
+            const marginEl = document.getElementById('presenter-margin');
+            presenterScale = Math.min(3, Math.max(0.5, Number(scaleEl?.value || presenterScale || 1)));
+            presenterMargin = Math.min(200, Math.max(0, Math.round(Number(marginEl?.value || presenterMargin || 24))));
+            updatePresenterPlacementReadout();
+            try {
+                const res = await apiPost('/api/display-config', {
+                    position: presenterPosition,
+                    scale: presenterScale,
+                    margin: presenterMargin,
+                });
+                const data = await res.json();
+                presenterPosition = Number((data.displayConfig || {}).position ?? presenterPosition);
+                presenterScale = Number((data.displayConfig || {}).scale ?? presenterScale);
+                presenterMargin = Number((data.displayConfig || {}).margin ?? presenterMargin);
+                updatePresenterPlacementReadout();
+                const statusEl = document.getElementById('presenter-placement-status');
+                if (statusEl) {
+                    statusEl.style.display = 'inline';
+                    statusEl.innerText = 'Applied ✓';
+                    setTimeout(() => { statusEl.style.display = 'none'; }, 1400);
+                }
+            } catch (error) {
+                alert(`Save failed: ${error.message}`);
+            }
+        }
+
+        async function saveDskBranding() {
+            const payload = {
+                dskBranding: {
+                    panelColor: document.getElementById('dsk-panel-color')?.value || '#111111',
+                    panelRadius: Number(document.getElementById('dsk-panel-radius')?.value || 28),
+                    panelPaddingVh: Number(document.getElementById('dsk-panel-pad-vh')?.value || 1.6),
+                    panelPaddingVw: Number(document.getElementById('dsk-panel-pad-vw')?.value || 2.2),
+                    panelSemanticBackground: !!document.getElementById('dsk-panel-semantic-bg')?.checked,
+                    text: {
+                        ok: document.getElementById('dsk-text-ok')?.value || '#ffffff',
+                        warning: document.getElementById('dsk-text-warning')?.value || '#f97316',
+                        overflow: document.getElementById('dsk-text-overflow')?.value || '#ef4444',
+                    },
+                },
+            };
+            try {
+                await apiPost('/api/display-config', payload);
+                alert('DSK branding saved.');
             } catch (error) {
                 alert(`Save failed: ${error.message}`);
             }
@@ -1575,6 +1724,11 @@
             hintPinToggle.addEventListener('change', () => localStorage.setItem('hintPinToPresenter', hintPinToggle.checked ? '1' : '0'));
             setRundownFlowMode(localStorage.getItem('rundownFlowMode') || 'overflow');
             document.getElementById('hint-threshold-seconds').value = getHintThreshold();
+            const scaleEl = document.getElementById('presenter-scale');
+            const marginEl = document.getElementById('presenter-margin');
+            if (scaleEl) scaleEl.addEventListener('input', () => { presenterScale = Number(scaleEl.value || 1); updatePresenterPlacementReadout(); });
+            if (marginEl) marginEl.addEventListener('input', () => { presenterMargin = Number(marginEl.value || 24); updatePresenterPlacementReadout(); });
+            updatePresenterPlacementReadout();
             setTargetModePreset('manual');
             loadDisplayConfig();
             loadRundown();
