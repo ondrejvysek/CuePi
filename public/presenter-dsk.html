@@ -141,7 +141,7 @@
 
         let currentMode = 'countdown';
         let localTimeInterval = null;
-        let cachedDisplay = { position: 4, scale: 1, margin: 24, profile: 'program' };
+        let cachedDisplay = { position: 4, scale: 1, margin: 24, profile: 'program', dskBranding: {} };
 
         const ANCHORS = {
             0: { x: 0, y: 0 }, 1: { x: 0.5, y: 0 }, 2: { x: 1, y: 0 },
@@ -165,6 +165,18 @@
             timerGroup.style.left = `${xPx}px`;
             timerGroup.style.top = `${yPx}px`;
             timerGroup.style.transform = `translate(-${anchor.x * 100}%, -${anchor.y * 100}%) scale(${safeScale})`;
+        }
+        function applyDskBranding(branding = {}, semanticState = 'ok') {
+            const d = branding || {};
+            const text = d.text || {};
+            const panelBg = d.panelBackground || {};
+            const useSemantic = d.panelSemanticBackground !== false;
+            clock.style.color = text[semanticState] || text.ok || '#ffffff';
+            timerPanel.style.borderRadius = `${Number(d.panelRadius ?? 28)}px`;
+            timerPanel.style.padding = `${Number(d.panelPaddingVh ?? 1.6)}vh ${Number(d.panelPaddingVw ?? 2.2)}vw`;
+            timerPanel.style.backgroundColor = useSemantic
+                ? (panelBg[semanticState] || panelBg.ok || '#111111')
+                : (d.panelColor || '#111111');
         }
 
         function normalizePresenterColors(colors) {
@@ -221,6 +233,7 @@
                     scale: Number(cfg.scale ?? cachedDisplay.scale),
                     margin: Number(cfg.margin ?? cachedDisplay.margin),
                     profile: String(cfg.profile || cachedDisplay.profile || 'program'),
+                    dskBranding: cfg.dskBranding || cachedDisplay.dskBranding || {},
                 };
                 applyTimerGroupTransform(cachedDisplay.position, cachedDisplay.scale, cachedDisplay.margin);
                 document.body.style.backgroundColor = cachedDisplay.profile === 'chroma_dsk' ? '#00ff00' : '#000000';
@@ -238,6 +251,7 @@
             const scale = state.scale ?? display.scale ?? 1;
             const margin = state.margin ?? display.margin ?? 24;
             const profile = state.profile || display.profile || 'program';
+            const dskBranding = state.dskBranding || display.dskBranding || cachedDisplay.dskBranding || {};
             window.lastPosition = position;
             window.lastScale = scale;
             window.lastMargin = margin;
@@ -246,6 +260,7 @@
 
             const semanticColors = applyPresenterColors(state.presenterColors);
             const semanticState = getSemanticState(state.mode, state.timeLeft);
+            applyDskBranding(dskBranding, semanticState);
 
             if (state.mode === 'timeofday') {
                 logoDisplay.style.display = 'none';
@@ -285,9 +300,9 @@
                         return `${state.timeLeft < 0 ? '-' : ''}${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
                     })();
                 clock.innerText = timeStr;
-                clock.style.color = semanticColors.text[semanticState] || semanticColors.text.ok;
+                clock.style.color = (dskBranding.text || {})[semanticState] || (dskBranding.text || {}).ok || semanticColors.text[semanticState] || semanticColors.text.ok;
                 clock.style.textShadow = semanticState === 'ok' ? 'none' : '0 0 16px rgba(0,0,0,0.35)';
-                timerPanel.style.backgroundColor = semanticColors.background[semanticState] || semanticColors.background.ok;
+                if (!dskBranding.panelSemanticBackground) timerPanel.style.backgroundColor = dskBranding.panelColor || '#111111';
 
                 if (state.mode === 'countdown') {
                     const progress = state.timeLeft <= 0 ? 0 : (state.timeLeft / state.initialTime) * 100;

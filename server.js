@@ -258,6 +258,29 @@ function sanitizePresenterColors(colors) {
   };
 }
 
+function sanitizeDskBranding(branding) {
+  const input = (branding && typeof branding === 'object') ? branding : {};
+  const defaults = {
+    panelColor: '#111111',
+    panelRadius: 28,
+    panelPaddingVh: 1.6,
+    panelPaddingVw: 2.2,
+    panelSemanticBackground: true,
+    text: { ok: '#ffffff', warning: '#f97316', overflow: '#ef4444' },
+    panelBackground: { ok: '#111111', warning: '#111111', overflow: '#111111' },
+  };
+  const safe = {
+    panelColor: isAcceptedColorFormat(input.panelColor) ? String(input.panelColor).trim() : defaults.panelColor,
+    panelRadius: Number.isFinite(Number(input.panelRadius)) ? Math.min(80, Math.max(0, Math.round(Number(input.panelRadius)))) : defaults.panelRadius,
+    panelPaddingVh: Number.isFinite(Number(input.panelPaddingVh)) ? Math.min(8, Math.max(0, Number(input.panelPaddingVh))) : defaults.panelPaddingVh,
+    panelPaddingVw: Number.isFinite(Number(input.panelPaddingVw)) ? Math.min(8, Math.max(0, Number(input.panelPaddingVw))) : defaults.panelPaddingVw,
+    panelSemanticBackground: input.panelSemanticBackground === undefined ? defaults.panelSemanticBackground : Boolean(input.panelSemanticBackground),
+    text: sanitizePresenterColors({ text: input.text || defaults.text }).text,
+    panelBackground: sanitizePresenterColors({ text: input.panelBackground || defaults.panelBackground }).text,
+  };
+  return safe;
+}
+
 function sanitizeDisplayConfig(nextDisplay) {
   const merged = {
     ...(bootData.display || {}),
@@ -296,6 +319,7 @@ function sanitizeDisplayConfig(nextDisplay) {
     scale: normalizedScale,
     margin: normalizedMargin,
     presenterColors: sanitizePresenterColors(merged.presenterColors),
+    dskBranding: sanitizeDskBranding(merged.dskBranding),
   };
 }
 
@@ -344,6 +368,10 @@ function validateDisplayConfigPayload(payload) {
         }
       }
     }
+  }
+  if (payload.dskBranding !== undefined) {
+    const b = payload.dskBranding;
+    if (!b || typeof b !== 'object' || Array.isArray(b)) details.push('dskBranding must be an object');
   }
   return { ok: details.length === 0, details };
 }
