@@ -3,6 +3,7 @@ const runCommand = (bin, args, cb) => execFile(bin, args, (error, stdout, stderr
 function createHardware({ systemdServiceName, legacySystemdServiceName, apConnectionName, legacyApConnectionName }) {
   return {
     restartService: () => runCommand('sudo', ['systemctl', 'restart', systemdServiceName], (e) => e && runCommand('sudo', ['systemctl', 'restart', legacySystemdServiceName], () => {})),
+    reloadHdmiOutput: () => runCommand('bash', ['-lc', `pkill -f chromium || true; sudo systemctl restart ${systemdServiceName} || sudo systemctl restart ${legacySystemdServiceName}`], () => {}),
     updateSystem: () => runCommand('bash', ['-lc', `git pull && npm install && sudo apt update && sudo apt upgrade -y && (sudo systemctl restart ${systemdServiceName} || sudo systemctl restart ${legacySystemdServiceName})`], () => {}),
     setHostname: (name, cb) => runCommand('sudo', ['hostnamectl', 'set-hostname', name], cb),
     setAp: (action, cb) => {

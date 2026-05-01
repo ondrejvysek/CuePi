@@ -143,6 +143,11 @@ function registerSystemRoutes(app, ctx) {
     res.json({ ok: true, status: 'Restarting system service' });
     hardware.restartService();
   });
+  app.post('/api/system/reload-hdmi', requireAdmin, (req, res) => {
+    res.json({ ok: true, status: 'Reloading HDMI output' });
+    if (hardware.reloadHdmiOutput) hardware.reloadHdmiOutput();
+    else hardware.restartService();
+  });
 
   app.post('/api/system/update', requireAdmin, (req, res) => {
     res.json({ ok: true, status: 'Pulling firmware and system updates' });
