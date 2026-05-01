@@ -271,6 +271,16 @@ function sanitizeDisplayConfig(nextDisplay) {
   const profileLegacyMapping = profileToLegacy[profile] || profileToLegacy.program;
   const rawSchemaVersion = Number(merged.schemaVersion);
   const rawProfileVersion = Number(merged.profileVersion);
+  const legacyPositionMap = { top: 1, center: 4, bottom: 7 };
+  const rawPosition = merged.position;
+  const numericPosition = Number(rawPosition);
+  const normalizedPosition = Number.isInteger(numericPosition) && numericPosition >= 0 && numericPosition <= 8
+    ? numericPosition
+    : legacyPositionMap[String(rawPosition || '').trim()] ?? 4;
+  const numericScale = Number(merged.scale);
+  const normalizedScale = Number.isFinite(numericScale) ? Math.min(3, Math.max(0.5, numericScale)) : 1;
+  const numericMargin = Number(merged.margin);
+  const normalizedMargin = Number.isFinite(numericMargin) ? Math.min(200, Math.max(0, Math.round(numericMargin))) : 24;
 
   return {
     ...merged,
@@ -282,6 +292,9 @@ function sanitizeDisplayConfig(nextDisplay) {
       : displayProfileVersion(),
     profile,
     keyMode: profileLegacyMapping.keyMode,
+    position: normalizedPosition,
+    scale: normalizedScale,
+    margin: normalizedMargin,
     presenterColors: sanitizePresenterColors(merged.presenterColors),
   };
 }
@@ -309,7 +322,13 @@ function validateDisplayConfigPayload(payload) {
   if (payload.profileVersion !== undefined && !numberField(payload.profileVersion, 'profileVersion', { integer: true, min: 1 }).ok) details.push('profileVersion must be an integer >= 1');
   if (payload.profile !== undefined && !enumField(payload.profile, 'profile', ['program', 'chroma_dsk', 'luma_dsk']).ok) details.push('profile must be one of: program, chroma_dsk, luma_dsk');
   if (payload.keyMode !== undefined && !enumField(payload.keyMode, 'keyMode', ['none', 'small', 'large', 'chroma', 'luma']).ok) details.push('keyMode must be one of: none, small, large, chroma, luma');
-  if (payload.position !== undefined && !enumField(payload.position, 'position', ['top', 'center', 'bottom']).ok) details.push('position must be one of: top, center, bottom');
+  if (payload.position !== undefined) {
+    const rawPosition = payload.position;
+    const numericPosition = Number(rawPosition);
+    const legacyOk = enumField(rawPosition, 'position', ['top', 'center', 'bottom']).ok;
+    const anchorOk = Number.isInteger(numericPosition) && numericPosition >= 0 && numericPosition <= 8;
+    if (!legacyOk && !anchorOk) details.push('position must be anchor index 0..8 or one of: top, center, bottom');
+  }
   if (payload.scale !== undefined && !numberField(payload.scale, 'scale', { min: 0.5, max: 3 }).ok) details.push('scale must be >= 0.5 and <= 3');
   if (payload.margin !== undefined && !numberField(payload.margin, 'margin', { integer: true, min: 0, max: 200 }).ok) details.push('margin must be >= 0 and <= 200');
   if (payload.presenterColors !== undefined) {
