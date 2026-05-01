@@ -1061,6 +1061,11 @@
                 const res = await apiPost('/api/display-config', { hdmiView: next });
                 const data = await res.json();
                 if (hdmiEl) hdmiEl.value = String((data.displayConfig || {}).hdmiView || 'presenter');
+                const shouldRestart = confirm('HDMI view saved and will persist across reboot.\n\nApply now without reboot? This restarts CuePi service (about 10-20s).');
+                if (shouldRestart) {
+                    await apiPost('/api/system/restart', {});
+                    alert('CuePi is restarting now. HDMI output will reload with the saved view.');
+                }
             } catch (error) {
                 alert(`Save failed: ${error.message}`);
             }
