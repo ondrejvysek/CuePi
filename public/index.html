@@ -103,6 +103,7 @@
         .mode-toggle button.active { background:#14b8a6; color:#042f2e; }
 
         .hidden { display: none; }
+        .anchor-active { outline: 2px solid #22c55e !important; box-shadow: 0 0 0 2px rgba(34,197,94,0.25) inset; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
@@ -310,15 +311,15 @@
             <div class="sys-group" style="margin-bottom:0;">
                 <h3>Presenter placement</h3>
                 <div class="sys-row" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;">
-                    <button class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(0)">↖ Top Left</button>
-                    <button class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(1)">↑ Top</button>
-                    <button class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(2)">↗ Top Right</button>
-                    <button class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(3)">← Left</button>
-                    <button class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(4)">• Center</button>
-                    <button class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(5)">→ Right</button>
-                    <button class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(6)">↙ Bottom Left</button>
-                    <button class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(7)">↓ Bottom</button>
-                    <button class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(8)">↘ Bottom Right</button>
+                    <button data-anchor="0" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(0)">↖ Top Left</button>
+                    <button data-anchor="1" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(1)">↑ Top</button>
+                    <button data-anchor="2" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(2)">↗ Top Right</button>
+                    <button data-anchor="3" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(3)">← Left</button>
+                    <button data-anchor="4" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(4)">• Center</button>
+                    <button data-anchor="5" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(5)">→ Right</button>
+                    <button data-anchor="6" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(6)">↙ Bottom Left</button>
+                    <button data-anchor="7" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(7)">↓ Bottom</button>
+                    <button data-anchor="8" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(8)">↘ Bottom Right</button>
                 </div>
                 <div class="sys-row" style="margin-top:10px;">
                     <label style="flex:1; font-size:11px; color:var(--text-dim);">Scale
@@ -330,6 +331,7 @@
                 </div>
                 <div class="sys-row" style="margin-top:6px;">
                     <span id="presenter-placement-readout" style="font-size:11px; color:var(--text-dim);">Anchor 4 · Scale 1.00 · Margin 24px</span>
+                    <span id="presenter-placement-status" style="font-size:11px; color:#86efac; display:none;">Applied ✓</span>
                     <button onclick="savePresenterPlacement()" class="sys-btn">SAVE</button>
                 </div>
             </div>
@@ -562,6 +564,9 @@
         function updatePresenterPlacementReadout() {
             const readout = document.getElementById('presenter-placement-readout');
             if (readout) readout.innerText = `Anchor ${presenterPosition} · Scale ${Number(presenterScale).toFixed(2)} · Margin ${presenterMargin}px`;
+            document.querySelectorAll('[data-anchor]').forEach((btn) => {
+                btn.classList.toggle('anchor-active', Number(btn.dataset.anchor) === Number(presenterPosition));
+            });
             const scaleEl = document.getElementById('presenter-scale');
             const marginEl = document.getElementById('presenter-margin');
             if (scaleEl) scaleEl.value = String(presenterScale);
@@ -1006,6 +1011,12 @@
                 presenterScale = Number((data.displayConfig || {}).scale ?? presenterScale);
                 presenterMargin = Number((data.displayConfig || {}).margin ?? presenterMargin);
                 updatePresenterPlacementReadout();
+                const statusEl = document.getElementById('presenter-placement-status');
+                if (statusEl) {
+                    statusEl.style.display = 'inline';
+                    statusEl.innerText = 'Applied ✓';
+                    setTimeout(() => { statusEl.style.display = 'none'; }, 1400);
+                }
             } catch (error) {
                 alert(`Save failed: ${error.message}`);
             }

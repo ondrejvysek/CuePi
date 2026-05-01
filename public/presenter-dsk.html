@@ -38,13 +38,20 @@
             align-items: center;
             width: 92vw;
             max-width: 92vw;
-            gap: 2.4vh;
+            gap: 1.2vh;
             pointer-events: none;
+        }
+        #timer-panel {
+            background: rgba(0,0,0,0.88);
+            border-radius: 28px;
+            padding: 1.6vh 2.2vw;
+            width: min(92vw, 1700px);
+            box-sizing: border-box;
         }
 
         #clock-container {
             width: 100%;
-            height: 32vh;
+            height: 24vh;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -65,7 +72,7 @@
 
         #msg-container {
             width: 100%;
-            min-height: 18vh;
+            min-height: 10vh;
             display: none;
             justify-content: center;
             align-items: center;
@@ -74,28 +81,28 @@
         }
 
         .message-box {
-            background: white;
-            color: black;
-            padding: 2rem 3rem;
-            border-radius: 2.2rem;
+            background: transparent;
+            color: white;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0;
             text-align: center;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.65);
-            width: min(88vw, 1500px);
-            min-height: 16vh;
+            box-shadow: none;
+            width: 100%;
+            min-height: 8vh;
             display: flex;
             flex-direction: column;
             justify-content: center;
         }
 
-        .message-label { display: block; font-size: 1.5vw; font-weight: 900; text-transform: uppercase; opacity: 0.3; margin-bottom: 0.5rem; letter-spacing: 0.2em; }
-        .message-text { font-size: clamp(2rem, 4.2vw, 6rem); font-weight: 900; font-style: italic; }
+        .message-label { display: block; font-size: 1vw; font-weight: 700; text-transform: uppercase; opacity: 0.45; margin-bottom: 0.3rem; letter-spacing: 0.1em; color: rgba(255,255,255,0.75); }
+        .message-text { font-size: clamp(1.5rem, 2.8vw, 3.8rem); font-weight: 700; font-style: normal; color: #fff; }
 
         #progress-container {
             width: min(92vw, 1700px);
             height: 2vh;
             min-height: 14px;
             display: none;
-            background: rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.22);
             overflow: hidden;
             border-radius: 999px;
         }
@@ -110,6 +117,7 @@
     <img id="logo-display" src="" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 85vw; max-height: 85vh; object-fit: contain; display: none;">
 
     <div id="timer-group">
+        <div id="timer-panel">
         <div id="clock-container"><div id="clock">00:10:00</div></div>
 
         <div id="msg-container">
@@ -120,6 +128,7 @@
         </div>
 
         <div id="progress-container"><div id="progress-bar"></div></div>
+        </div>
     </div>
 
     <script>
@@ -132,6 +141,7 @@
         const ipOverlay = document.getElementById('ip-overlay');
         const logoDisplay = document.getElementById('logo-display');
         const timerGroup = document.getElementById('timer-group');
+        const timerPanel = document.getElementById('timer-panel');
 
         let currentMode = 'countdown';
         let localTimeInterval = null;
@@ -143,8 +153,8 @@
         };
 
         const defaultPresenterColors = {
-            text: { ok: '#22c55e', warning: '#ffffff', overflow: '#ffffff' },
-            background: { ok: '#000000', warning: '#f97316', overflow: '#ef4444' },
+            text: { ok: '#ffffff', warning: '#f97316', overflow: '#ef4444' },
+            background: { ok: '#111111', warning: '#111111', overflow: '#111111' },
             indicator: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
         };
         const blackValues = new Set(['#000', '#000000', 'black', 'rgb(0,0,0)', 'rgb(0, 0, 0)']);
@@ -206,10 +216,16 @@
 
         socket.on('stateUpdate', (state) => {
             currentMode = state.mode;
-            window.lastPosition = state.position ?? 4;
-            window.lastScale = state.scale ?? 1;
-            window.lastMargin = state.margin ?? 24;
+            const display = state.displayConfig || state.display || {};
+            const position = state.position ?? display.position ?? 4;
+            const scale = state.scale ?? display.scale ?? 1;
+            const margin = state.margin ?? display.margin ?? 24;
+            const profile = state.profile || display.profile || 'program';
+            window.lastPosition = position;
+            window.lastScale = scale;
+            window.lastMargin = margin;
             applyTimerGroupTransform(window.lastPosition, window.lastScale, window.lastMargin);
+            document.body.style.backgroundColor = profile === 'chroma_dsk' ? '#00ff00' : '#000000';
 
             const semanticColors = applyPresenterColors(state.presenterColors);
             const semanticState = getSemanticState(state.mode, state.timeLeft);
@@ -259,7 +275,7 @@
                 clock.innerText = timeStr;
                 clock.style.color = semanticColors.text[semanticState] || semanticColors.text.ok;
                 clock.style.textShadow = semanticState === 'ok' ? 'none' : '0 0 16px rgba(0,0,0,0.35)';
-                document.body.style.backgroundColor = semanticColors.background[semanticState] || semanticColors.background.ok;
+                timerPanel.style.backgroundColor = semanticColors.background[semanticState] || semanticColors.background.ok;
 
                 if (state.mode === 'countdown') {
                     const progress = state.timeLeft <= 0 ? 0 : (state.timeLeft / state.initialTime) * 100;
