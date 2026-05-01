@@ -355,8 +355,8 @@
                     <label style="flex:1; font-size:11px; color:var(--text-dim);">Pad VW <input id="dsk-panel-pad-vw" type="range" min="0" max="8" step="0.1" class="sys-input"></label>
                 </div>
                 <div class="sys-row" style="margin-bottom:0;">
-                    <label style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-dim);"><input type="checkbox" id="dsk-panel-semantic-bg" checked> Semantic box background</label>
                     <label style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-dim);"><input type="checkbox" id="dsk-panel-transparent"> Transparent panel</label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-dim);"><input type="checkbox" id="dsk-progress-enabled" checked> Show progress bar</label>
                     <span id="dsk-branding-status" style="font-size:11px; color:#86efac; display:none;">Applied ✓</span>
                     <button onclick="saveDskBranding()" class="sys-btn">SAVE DSK BRANDING</button>
                 </div>
@@ -1008,10 +1008,10 @@
                 set('dsk-panel-radius', d.panelRadius ?? 28);
                 set('dsk-panel-pad-vh', d.panelPaddingVh ?? 1.6);
                 set('dsk-panel-pad-vw', d.panelPaddingVw ?? 2.2);
-                const sem = document.getElementById('dsk-panel-semantic-bg');
-                if (sem) sem.checked = d.panelSemanticBackground !== false;
                 const transparent = document.getElementById('dsk-panel-transparent');
                 if (transparent) transparent.checked = d.panelTransparent === true;
+                const progressEnabled = document.getElementById('dsk-progress-enabled');
+                if (progressEnabled) progressEnabled.checked = d.progressEnabled !== false;
                 refreshDskColorPreviews();
             } catch (error) {
                 console.warn('Display config load failed:', error.message);
@@ -1078,8 +1078,9 @@
                     panelRadius: Number(document.getElementById('dsk-panel-radius')?.value || 28),
                     panelPaddingVh: Number(document.getElementById('dsk-panel-pad-vh')?.value || 1.6),
                     panelPaddingVw: Number(document.getElementById('dsk-panel-pad-vw')?.value || 2.2),
-                    panelSemanticBackground: !!document.getElementById('dsk-panel-semantic-bg')?.checked,
+                    panelSemanticBackground: true,
                     panelTransparent: !!document.getElementById('dsk-panel-transparent')?.checked,
+                    progressEnabled: !!document.getElementById('dsk-progress-enabled')?.checked,
                     text: {
                         ok: document.getElementById('dsk-text-ok')?.value || '#ffffff',
                         warning: document.getElementById('dsk-text-warning')?.value || '#f97316',

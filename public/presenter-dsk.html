@@ -295,7 +295,8 @@
             } else {
                 logoDisplay.style.display = 'none';
                 timerGroup.style.display = 'flex';
-                progressContainer.style.display = 'block';
+                const showProgress = (dskBranding.progressEnabled !== false);
+                progressContainer.style.display = showProgress ? 'block' : 'none';
                 const timeStr = state.mode === 'target'
                     ? formatCountdownSignedDDHHMMSS(state.timeLeft)
                     : (() => {
@@ -315,11 +316,13 @@
                 } else {
                     progressBar.style.width = '100%';
                 }
-                progressBar.style.backgroundColor = semanticState === 'overflow'
-                    ? ((dskBranding.progress || {}).overflow || '#ef4444')
-                    : semanticState === 'warning'
-                        ? ((dskBranding.progress || {}).warning || '#f97316')
-                        : ((dskBranding.progress || {}).ok || '#ffffff');
+                if (showProgress) {
+                    progressBar.style.backgroundColor = semanticState === 'overflow'
+                        ? ((dskBranding.progress || {}).overflow || '#ef4444')
+                        : semanticState === 'warning'
+                            ? ((dskBranding.progress || {}).warning || '#f97316')
+                            : ((dskBranding.progress || {}).ok || '#ffffff');
+                }
             }
 
             if (state.showMessage && state.message) {
