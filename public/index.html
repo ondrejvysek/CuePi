@@ -339,15 +339,15 @@
                 <h3>DSK branding</h3>
                 <p style="font-size:11px; color:var(--text-dim); margin:0 0 8px 0; text-align:center;">Panel + Digits (OK / Warn / Overflow) + Progress (OK / Warn / Overflow)</p>
                 <div class="sys-row" style="display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:8px;">
-                    <div style="text-align:center;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">Panel</div><input id="dsk-panel-color" type="color" class="sys-input" style="width:100%;"><div id="preview-dsk-panel-color" style="height:4px; border-radius:999px; margin-top:6px; background:#111;"></div></div>
-                    <div style="text-align:center;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">OK</div><input id="dsk-text-ok" type="color" class="sys-input" style="width:100%;"><div id="preview-dsk-text-ok" style="height:4px; border-radius:999px; margin-top:6px; background:#fff;"></div></div>
-                    <div style="text-align:center;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">Warn</div><input id="dsk-text-warning" type="color" class="sys-input" style="width:100%;"><div id="preview-dsk-text-warning" style="height:4px; border-radius:999px; margin-top:6px; background:#f97316;"></div></div>
-                    <div style="text-align:center;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">Over</div><input id="dsk-text-overflow" type="color" class="sys-input" style="width:100%;"><div id="preview-dsk-text-overflow" style="height:4px; border-radius:999px; margin-top:6px; background:#ef4444;"></div></div>
+                    <div style="text-align:center;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">Panel</div><input id="dsk-panel-color" type="color" class="sys-input" style="width:100%;"></div>
+                    <div style="text-align:center;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">OK</div><input id="dsk-text-ok" type="color" class="sys-input" style="width:100%;"></div>
+                    <div style="text-align:center;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">Warn</div><input id="dsk-text-warning" type="color" class="sys-input" style="width:100%;"></div>
+                    <div style="text-align:center;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">Over</div><input id="dsk-text-overflow" type="color" class="sys-input" style="width:100%;"></div>
                 </div>
                 <div class="sys-row" style="display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:8px;">
-                    <div style="text-align:center;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">Progress OK</div><input id="dsk-progress-ok" type="color" class="sys-input" style="width:100%;"><div id="preview-dsk-progress-ok" style="height:4px; border-radius:999px; margin-top:6px; background:#fff;"></div></div>
-                    <div style="text-align:center;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">Progress Warn</div><input id="dsk-progress-warning" type="color" class="sys-input" style="width:100%;"><div id="preview-dsk-progress-warning" style="height:4px; border-radius:999px; margin-top:6px; background:#f97316;"></div></div>
-                    <div style="text-align:center;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">Progress Over</div><input id="dsk-progress-overflow" type="color" class="sys-input" style="width:100%;"><div id="preview-dsk-progress-overflow" style="height:4px; border-radius:999px; margin-top:6px; background:#ef4444;"></div></div>
+                    <div style="text-align:center;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">Progress OK</div><input id="dsk-progress-ok" type="color" class="sys-input" style="width:100%;"></div>
+                    <div style="text-align:center;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">Progress Warn</div><input id="dsk-progress-warning" type="color" class="sys-input" style="width:100%;"></div>
+                    <div style="text-align:center;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">Progress Over</div><input id="dsk-progress-overflow" type="color" class="sys-input" style="width:100%;"></div>
                 </div>
                 <div class="sys-row">
                     <label style="flex:1; font-size:11px; color:var(--text-dim);">Radius <input id="dsk-panel-radius" type="range" min="0" max="80" step="1" class="sys-input"></label>
@@ -607,8 +607,7 @@
         function refreshDskColorPreviews() {
             ['dsk-panel-color','dsk-text-ok','dsk-text-warning','dsk-text-overflow','dsk-progress-ok','dsk-progress-warning','dsk-progress-overflow'].forEach((id) => {
                 const input = document.getElementById(id);
-                const preview = document.getElementById(`preview-${id}`);
-                if (input && preview) preview.style.backgroundColor = input.value;
+                if (input) input.style.backgroundColor = input.value;
             });
         }
 
