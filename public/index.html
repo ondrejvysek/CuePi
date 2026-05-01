@@ -322,7 +322,7 @@
                         <option value="presenter">HDMI: Classic Presenter</option>
                         <option value="presenter_dsk">HDMI: DSK Presenter</option>
                     </select>
-                    <button onclick="saveHdmiView()" class="sys-btn">SAVE HDMI VIEW</button>
+                    <button onclick="saveHdmiView()" class="sys-btn">APPLY HDMI VIEW</button>
                 </div>
             </div>
             <div class="sys-group" style="margin-bottom:0;">
@@ -371,10 +371,11 @@
                     <label style="flex:1; font-size:11px; color:var(--text-dim);">Pad VH <input id="dsk-panel-pad-vh" type="range" min="0" max="8" step="0.1" class="sys-input"></label>
                     <label style="flex:1; font-size:11px; color:var(--text-dim);">Pad VW <input id="dsk-panel-pad-vw" type="range" min="0" max="8" step="0.1" class="sys-input"></label>
                 </div>
-                <div class="sys-row" style="margin-bottom:0;">
+                <div class="sys-row" style="margin-bottom:0; gap:8px; flex-wrap:wrap;">
                     <label style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-dim);"><input type="checkbox" id="dsk-panel-transparent"> Transparent panel</label>
                     <label style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-dim);"><input type="checkbox" id="dsk-progress-enabled" checked> Show progress bar</label>
                     <span id="dsk-branding-status" style="font-size:11px; color:#86efac; display:none;">Applied ✓</span>
+                    <button onclick="loadDskBrandingDefaults()" class="sys-btn" style="background:#334155;">LOAD DEFAULT COLORS</button>
                     <button onclick="saveDskBranding()" class="sys-btn">SAVE DSK BRANDING</button>
                 </div>
             </div>
@@ -583,6 +584,16 @@
                 text: { ok: '#22c55e', warning: '#ffffff', overflow: '#ffffff' },
                 background: { ok: '#000000', warning: '#f97316', overflow: '#ef4444' },
                 indicator: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
+            };
+            const dskBrandingDefaults = {
+                panelColor: '#111111',
+                panelRadius: 28,
+                panelPaddingVh: 1.6,
+                panelPaddingVw: 2.2,
+                panelTransparent: false,
+                progressEnabled: true,
+                text: { ok: '#ffffff', warning: '#f97316', overflow: '#ef4444' },
+                progress: { ok: '#ffffff', warning: '#f97316', overflow: '#ef4444' },
             };
             let presenterColors = { ...presenterColorDefaults.text };
             let presenterPosition = 4;
@@ -1071,6 +1082,7 @@
                 const res = await apiPost('/api/display-config', { hdmiView: next });
                 const data = await res.json();
                 if (hdmiEl) hdmiEl.value = String((data.displayConfig || {}).hdmiView || 'presenter');
+                closePresenterOutModal();
                 document.getElementById('hdmi-apply-modal').classList.add('active');
             } catch (error) {
                 alert(`Save failed: ${error.message}`);
@@ -1114,6 +1126,30 @@
             } catch (error) {
                 alert(`Save failed: ${error.message}`);
             }
+        }
+
+        function applyDskBrandingDefaultsToInputs() {
+            const set = (id, val) => { const el = document.getElementById(id); if (el != null && val != null) el.value = String(val); };
+            set('dsk-panel-color', dskBrandingDefaults.panelColor);
+            set('dsk-text-ok', dskBrandingDefaults.text.ok);
+            set('dsk-text-warning', dskBrandingDefaults.text.warning);
+            set('dsk-text-overflow', dskBrandingDefaults.text.overflow);
+            set('dsk-progress-ok', dskBrandingDefaults.progress.ok);
+            set('dsk-progress-warning', dskBrandingDefaults.progress.warning);
+            set('dsk-progress-overflow', dskBrandingDefaults.progress.overflow);
+            set('dsk-panel-radius', dskBrandingDefaults.panelRadius);
+            set('dsk-panel-pad-vh', dskBrandingDefaults.panelPaddingVh);
+            set('dsk-panel-pad-vw', dskBrandingDefaults.panelPaddingVw);
+            const transparent = document.getElementById('dsk-panel-transparent');
+            if (transparent) transparent.checked = dskBrandingDefaults.panelTransparent;
+            const progressEnabled = document.getElementById('dsk-progress-enabled');
+            if (progressEnabled) progressEnabled.checked = dskBrandingDefaults.progressEnabled;
+            refreshDskColorPreviews();
+        }
+
+        async function loadDskBrandingDefaults() {
+            applyDskBrandingDefaultsToInputs();
+            await saveDskBranding();
         }
 
         async function saveDskBranding() {
