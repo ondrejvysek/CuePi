@@ -5,8 +5,9 @@
     <title>Presenter View | CuePi</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
+        /* Attempt to load web fonts, but provide robust, smooth local fallbacks if offline */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@900&family=JetBrains+Mono:wght@700&display=swap');
-
+        
         :root {
             --bg: #000000;
             --ok: #22c55e;
@@ -17,89 +18,63 @@
 
         *, html, body { cursor: none !important; user-select: none; }
 
-        body {
-            margin: 0;
-            background-color: var(--bg);
-            color: var(--text);
+        body { 
+            margin: 0; 
+            background-color: var(--bg); 
+            color: var(--text); 
             font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            overflow: hidden;
-            height: 100vh;
-            transition: background-color 0.12s linear, color 0.12s linear;
-        }
-
-        #timer-group {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            transform-origin: center center;
-            display: flex;
+            overflow: hidden; 
+            height: 100vh; 
+            display: flex; 
             flex-direction: column;
-            align-items: center;
-            width: 92vw;
-            max-width: 92vw;
-            gap: 2.4vh;
-            pointer-events: none;
+            align-items: center; 
+            justify-content: center; 
+            transition: background-color 0.5s, color 0.5s;
+            padding: 0 4vw;
+            box-sizing: border-box;
         }
 
-        #clock-container {
-            width: 100%;
-            height: 32vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+        #clock-container { width: 100%; display: flex; justify-content: center; align-items: center; }
 
-        #clock {
+        /* The font-family here adds system-level monospace fallbacks so it stays smooth offline! */
+        #clock { 
             font-family: 'JetBrains Mono', 'DejaVu Sans Mono', 'Liberation Mono', Consolas, Monaco, monospace;
-            font-size: 18vw;
-            font-weight: 700;
-            font-variant-numeric: tabular-nums;
-            line-height: 1;
-            letter-spacing: -0.02em;
+            font-size: 28vw;
+            font-weight: 700; 
+            font-variant-numeric: tabular-nums; 
+            line-height: 1; 
+            letter-spacing: -0.02em; 
             white-space: nowrap;
             text-align: center;
-            width: 100%;
-            font-feature-settings: "tnum" 1, "lnum" 1;
         }
 
         #msg-container {
-            width: 100%;
-            min-height: 18vh;
-            display: none;
-            justify-content: center;
-            align-items: center;
-            box-sizing: border-box;
-            padding: 0 4vw;
+            position: absolute; bottom: 12%; width: 100%; display: flex; justify-content: center;
+            padding: 0 5%; box-sizing: border-box; display: none;
         }
-
         .message-box {
-            background: white;
-            color: black;
-            padding: 2rem 3rem;
-            border-radius: 2.2rem;
-            text-align: center;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.65);
-            width: min(88vw, 1500px);
-            min-height: 16vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
+            background: white; color: black; padding: 2.5rem 5rem; border-radius: 3rem; text-align: center;
+            box-shadow: 0 40px 80px rgba(0,0,0,0.9);
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .message-label { display: block; font-size: 2vw; font-weight: 900; text-transform: uppercase; opacity: 0.3; margin-bottom: 0.5rem; letter-spacing: 0.2em; }
+        .message-text { font-size: 6vw; font-weight: 900; font-style: italic; }
+
+        @keyframes popIn { 
+            from { transform: scale(0.8) translateY(100px); opacity: 0; } 
+            to { transform: scale(1) translateY(0); opacity: 1; } 
         }
 
-        .message-label { display: block; font-size: 1.5vw; font-weight: 900; text-transform: uppercase; opacity: 0.3; margin-bottom: 0.5rem; letter-spacing: 0.2em; }
-        .message-text { font-size: clamp(2rem, 4.2vw, 6rem); font-weight: 900; font-style: italic; }
+        #progress-container { position: absolute; bottom: 0; left: 0; width: 100%; height: 2vh; background: rgba(255,255,255,0.1); }
+        #progress-bar { height: 100%; background: #22c55e; width: 100%; transition: width 1s linear, background-color 1s linear; }
 
-        #progress-container {
-            width: min(92vw, 1700px);
-            height: 2vh;
-            min-height: 14px;
-            display: none;
-            background: rgba(255,255,255,0.12);
-            overflow: hidden;
-            border-radius: 999px;
+        body.state-warning { background-color: var(--warning); color: white; }
+        
+        /* Removed heavy box-shadow animation to prevent lag. Uses standard solid background color now. */
+        body.state-overflow { 
+            background-color: var(--overflow); 
+            color: white; 
         }
-        #progress-bar { height: 100%; background: #22c55e; width: 100%; transition: width 1s linear, background-color 0.12s linear; }
 
         #ip-overlay { position: absolute; top: 2vw; left: 2vw; color: rgba(255,255,255,0.4); font-family: monospace; font-size: 2vw; z-index: 100; }
     </style>
@@ -109,60 +84,39 @@
 
     <img id="logo-display" src="" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 85vw; max-height: 85vh; object-fit: contain; display: none;">
 
-    <div id="timer-group">
-        <div id="clock-container"><div id="clock">00:10:00</div></div>
-
-        <div id="msg-container">
-            <div class="message-box">
-                <span class="message-label">Control Message</span>
-                <span id="msg-text" class="message-text"></span>
-            </div>
+    <div id="clock-container"><div id="clock">10:00</div></div>
+    
+    <div id="msg-container">
+        <div class="message-box">
+            <span class="message-label">Control Message</span>
+            <span id="msg-text" class="message-text"></span>
         </div>
-
-        <div id="progress-container"><div id="progress-bar"></div></div>
     </div>
+
+    <div id="progress-container"><div id="progress-bar"></div></div>
 
     <script>
         const socket = io();
         const clock = document.getElementById('clock');
         const progressBar = document.getElementById('progress-bar');
-        const progressContainer = document.getElementById('progress-container');
         const msgContainer = document.getElementById('msg-container');
         const msgText = document.getElementById('msg-text');
         const ipOverlay = document.getElementById('ip-overlay');
         const logoDisplay = document.getElementById('logo-display');
-        const timerGroup = document.getElementById('timer-group');
 
         let currentMode = 'countdown';
         let localTimeInterval = null;
-
-        const ANCHORS = {
-            0: { x: 0, y: 0 }, 1: { x: 0.5, y: 0 }, 2: { x: 1, y: 0 },
-            3: { x: 0, y: 0.5 }, 4: { x: 0.5, y: 0.5 }, 5: { x: 1, y: 0.5 },
-            6: { x: 0, y: 1 }, 7: { x: 0.5, y: 1 }, 8: { x: 1, y: 1 },
-        };
-
         const defaultPresenterColors = {
             text: { ok: '#22c55e', warning: '#ffffff', overflow: '#ffffff' },
             background: { ok: '#000000', warning: '#f97316', overflow: '#ef4444' },
             indicator: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
         };
         const blackValues = new Set(['#000', '#000000', 'black', 'rgb(0,0,0)', 'rgb(0, 0, 0)']);
-
-        function applyTimerGroupTransform(position = 4, scale = 1, margin = 24) {
-            const anchor = ANCHORS[position] || ANCHORS[4];
-            const safeMargin = Math.max(0, Number(margin) || 0);
-            const safeScale = Math.min(3, Math.max(0.4, Number(scale) || 1));
-            const xPx = anchor.x * (window.innerWidth - safeMargin * 2) + safeMargin;
-            const yPx = anchor.y * (window.innerHeight - safeMargin * 2) + safeMargin;
-            timerGroup.style.left = `${xPx}px`;
-            timerGroup.style.top = `${yPx}px`;
-            timerGroup.style.transform = `translate(-${anchor.x * 100}%, -${anchor.y * 100}%) scale(${safeScale})`;
-        }
-
         function normalizePresenterColors(colors) {
             const source = (colors && typeof colors === 'object') ? colors : {};
-            const textSource = source.text && typeof source.text === 'object' ? source.text : source;
+            const textSource = source.text && typeof source.text === 'object'
+                ? source.text
+                : source;
             const next = {
                 text: { ...defaultPresenterColors.text, ...(textSource || {}) },
                 background: { ...defaultPresenterColors.background, ...((source.background && typeof source.background === 'object') ? source.background : {}) },
@@ -177,7 +131,7 @@
             if (mode === 'target') return timeLeft <= 0 ? 'overflow' : 'ok';
             if (mode !== 'countdown') return 'ok';
             if (timeLeft <= 0) return 'overflow';
-            if (timeLeft <= 120) return 'warning';
+            if (mode === 'countdown' && timeLeft <= 120) return 'warning';
             return 'ok';
         }
 
@@ -200,54 +154,59 @@
             return `${days.toString().padStart(2, '0')} ${dayLabel} ${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         }
 
-        window.addEventListener('resize', () => {
-            applyTimerGroupTransform(window.lastPosition, window.lastScale, window.lastMargin);
-        });
-
         socket.on('stateUpdate', (state) => {
             currentMode = state.mode;
-            window.lastPosition = state.position ?? 4;
-            window.lastScale = state.scale ?? 1;
-            window.lastMargin = state.margin ?? 24;
-            applyTimerGroupTransform(window.lastPosition, window.lastScale, window.lastMargin);
-
             const semanticColors = applyPresenterColors(state.presenterColors);
             const semanticState = getSemanticState(state.mode, state.timeLeft);
 
             if (state.ip && !ipOverlay.dataset.hidden) {
-                ipOverlay.innerText = 'IP: ' + state.ip;
+                ipOverlay.innerText = "IP: " + state.ip;
                 setTimeout(() => { ipOverlay.style.display = 'none'; ipOverlay.dataset.hidden = 'true'; }, 15000);
             }
 
+            document.body.classList.remove('state-warning', 'state-overflow');
+            document.body.style.color = '';
+            document.body.style.backgroundColor = '';
+
             if (state.mode === 'timeofday') {
                 logoDisplay.style.display = 'none';
-                timerGroup.style.display = 'flex';
-                progressContainer.style.display = 'none';
+                document.getElementById('clock-container').style.display = 'flex';
+                clock.style.opacity = '1';
                 clock.style.color = semanticColors.text.ok;
                 if (!localTimeInterval) {
                     localTimeInterval = setInterval(() => {
-                        if (currentMode === 'timeofday') {
+                        if(currentMode === 'timeofday') {
                             clock.innerText = new Date().toLocaleTimeString('en-US', { hour12: false });
+                            clock.style.fontSize = (84 / (8 * 0.6)) + "vw";
                         }
                     }, 1000);
+                    clock.innerText = new Date().toLocaleTimeString('en-US', { hour12: false });
+                    clock.style.fontSize = (84 / (8 * 0.6)) + "vw";
                 }
-                clock.innerText = new Date().toLocaleTimeString('en-US', { hour12: false });
+                document.getElementById('progress-container').style.display = 'none';
+                
             } else if (state.mode === 'logo') {
+                // Improved safety check to ensure it correctly identifies a loaded logo
                 if (state.logoData && state.logoData.length > 50) {
-                    if (logoDisplay.getAttribute('src') !== state.logoData) logoDisplay.setAttribute('src', state.logoData);
+                    if (logoDisplay.getAttribute('src') !== state.logoData) {
+                        logoDisplay.setAttribute('src', state.logoData);
+                    }
                     logoDisplay.style.display = 'block';
-                    timerGroup.style.display = 'none';
+                    document.getElementById('clock-container').style.display = 'none';
                 } else {
                     logoDisplay.style.display = 'none';
-                    timerGroup.style.display = 'flex';
-                    clock.innerText = 'EVENT LOGO';
+                    document.getElementById('clock-container').style.display = 'flex';
+                    clock.innerText = "EVENT LOGO";
+                    clock.style.fontSize = "12vw";
+                    clock.style.opacity = "1";
                     clock.style.color = semanticColors.text.ok;
                 }
-                progressContainer.style.display = 'none';
+                document.getElementById('progress-container').style.display = 'none';
+
             } else {
                 logoDisplay.style.display = 'none';
-                timerGroup.style.display = 'flex';
-                progressContainer.style.display = 'block';
+                document.getElementById('clock-container').style.display = 'flex';
+                document.getElementById('progress-container').style.display = 'block';
                 const timeStr = state.mode === 'target'
                     ? formatCountdownSignedDDHHMMSS(state.timeLeft)
                     : (() => {
@@ -257,21 +216,33 @@
                         return `${state.timeLeft < 0 ? '-' : ''}${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
                     })();
                 clock.innerText = timeStr;
+                clock.style.opacity = "1";
+
+                const charCount = timeStr.length;
+                let fontSizeVw = 84 / (charCount * 0.6);
+                if (fontSizeVw > 28) fontSizeVw = 28;
+                clock.style.fontSize = fontSizeVw + "vw";
                 clock.style.color = semanticColors.text[semanticState] || semanticColors.text.ok;
                 clock.style.textShadow = semanticState === 'ok' ? 'none' : '0 0 16px rgba(0,0,0,0.35)';
+
                 document.body.style.backgroundColor = semanticColors.background[semanticState] || semanticColors.background.ok;
 
                 if (state.mode === 'countdown') {
                     const progress = state.timeLeft <= 0 ? 0 : (state.timeLeft / state.initialTime) * 100;
                     progressBar.style.width = `${progress}%`;
+                    progressBar.style.backgroundColor = semanticState === 'overflow'
+                        ? semanticColors.indicator.overflow
+                        : semanticState === 'warning'
+                            ? semanticColors.indicator.warning
+                            : semanticColors.indicator.ok;
                 } else {
                     progressBar.style.width = '100%';
+                    progressBar.style.backgroundColor = semanticState === 'overflow'
+                        ? semanticColors.indicator.overflow
+                        : semanticState === 'warning'
+                            ? semanticColors.indicator.warning
+                            : semanticColors.indicator.ok;
                 }
-                progressBar.style.backgroundColor = semanticState === 'overflow'
-                    ? semanticColors.indicator.overflow
-                    : semanticState === 'warning'
-                        ? semanticColors.indicator.warning
-                        : semanticColors.indicator.ok;
             }
 
             if (state.showMessage && state.message) {
