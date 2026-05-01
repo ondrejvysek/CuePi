@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Presenter View | CuePi</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@900&family=JetBrains+Mono:wght@700&display=swap');
+
+        :root {
+            --bg: #000000;
+            --ok: #22c55e;
+            --warning: #f97316;
+            --overflow: #ef4444;
+            --text: var(--ok);
+        }
+
+        *, html, body { cursor: none !important; user-select: none; }
+
+        body {
+            margin: 0;
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            transition: background-color 0.12s linear, color 0.12s linear;
+        }
+
+        #timer-group {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            transform-origin: center center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 92vw;
+            max-width: 92vw;
+            gap: 1.2vh;
+            pointer-events: none;
+        }
+        #timer-panel {
+            background: rgba(0,0,0,0.88);
+            border-radius: 28px;
+            padding: 1.6vh 2.2vw;
+            width: min(92vw, 1700px);
+            box-sizing: border-box;
+        }
+
+        #clock-container {
+            width: 100%;
+            height: 24vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #clock {
+            font-family: 'JetBrains Mono', 'DejaVu Sans Mono', 'Liberation Mono', Consolas, Monaco, monospace;
+            font-size: 18vw;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            line-height: 1;
+            letter-spacing: -0.02em;
+            white-space: nowrap;
+            text-align: center;
+            width: 100%;
+            font-feature-settings: "tnum" 1, "lnum" 1;
+        }
+
+        #msg-container {
+            width: 100%;
+            min-height: 10vh;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+            padding: 0 4vw;
+        }
+
+        .message-box {
+            background: transparent;
+            color: white;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0;
+            text-align: center;
+            box-shadow: none;
+            width: 100%;
+            min-height: 8vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .message-label { display: block; font-size: 1vw; font-weight: 700; text-transform: uppercase; opacity: 0.45; margin-bottom: 0.3rem; letter-spacing: 0.1em; color: rgba(255,255,255,0.75); }
+        .message-text { font-size: clamp(1.5rem, 2.8vw, 3.8rem); font-weight: 700; font-style: normal; color: #fff; }
+
+        #progress-container {
+            width: min(92vw, 1700px);
+            height: 2vh;
+            min-height: 14px;
+            display: none;
+            background: rgba(255,255,255,0.22);
+            overflow: hidden;
+            border-radius: 999px;
+        }
+        #progress-bar { height: 100%; background: #22c55e; width: 100%; transition: width 1s linear, background-color 0.12s linear; }
+
+    </style>
+</head>
+<body>
+    <img id="logo-display" src="" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 85vw; max-height: 85vh; object-fit: contain; display: none;">
+
+    <div id="timer-group">
+        <div id="timer-panel">
+        <div id="clock-container"><div id="clock">00:10:00</div></div>
+
+        <div id="msg-container">
+            <div class="message-box">
+                <span class="message-label">Control Message</span>
+                <span id="msg-text" class="message-text"></span>
+            </div>
+        </div>
+
+        <div id="progress-container"><div id="progress-bar"></div></div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        const clock = document.getElementById('clock');
+        const progressBar = document.getElementById('progress-bar');
+        const progressContainer = document.getElementById('progress-container');
+        const msgContainer = document.getElementById('msg-container');
+        const msgText = document.getElementById('msg-text');
+        const logoDisplay = document.getElementById('logo-display');
+        const timerGroup = document.getElementById('timer-group');
+        const timerPanel = document.getElementById('timer-panel');
+
+        let currentMode = 'countdown';
+        let localTimeInterval = null;
+        let cachedDisplay = { position: 4, scale: 1, margin: 24, profile: 'program' };
+
+        const ANCHORS = {
+            0: { x: 0, y: 0 }, 1: { x: 0.5, y: 0 }, 2: { x: 1, y: 0 },
+            3: { x: 0, y: 0.5 }, 4: { x: 0.5, y: 0.5 }, 5: { x: 1, y: 0.5 },
+            6: { x: 0, y: 1 }, 7: { x: 0.5, y: 1 }, 8: { x: 1, y: 1 },
+        };
+
+        const defaultPresenterColors = {
+            text: { ok: '#ffffff', warning: '#f97316', overflow: '#ef4444' },
+            background: { ok: '#111111', warning: '#111111', overflow: '#111111' },
+            indicator: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
+        };
+        const blackValues = new Set(['#000', '#000000', 'black', 'rgb(0,0,0)', 'rgb(0, 0, 0)']);
+
+        function applyTimerGroupTransform(position = 4, scale = 1, margin = 24) {
+            const anchor = ANCHORS[position] || ANCHORS[4];
+            const safeMargin = Math.max(0, Number(margin) || 0);
+            const safeScale = Math.min(3, Math.max(0.4, Number(scale) || 1));
+            const xPx = anchor.x * (window.innerWidth - safeMargin * 2) + safeMargin;
+            const yPx = anchor.y * (window.innerHeight - safeMargin * 2) + safeMargin;
+            timerGroup.style.left = `${xPx}px`;
+            timerGroup.style.top = `${yPx}px`;
+            timerGroup.style.transform = `translate(-${anchor.x * 100}%, -${anchor.y * 100}%) scale(${safeScale})`;
+        }
+
+        function normalizePresenterColors(colors) {
+            const source = (colors && typeof colors === 'object') ? colors : {};
+            const textSource = source.text && typeof source.text === 'object' ? source.text : source;
+            const next = {
+                text: { ...defaultPresenterColors.text, ...(textSource || {}) },
+                background: { ...defaultPresenterColors.background, ...((source.background && typeof source.background === 'object') ? source.background : {}) },
+                indicator: { ...defaultPresenterColors.indicator, ...((source.indicator && typeof source.indicator === 'object') ? source.indicator : {}) },
+            };
+            const okRaw = String(next.text.ok || '').trim().toLowerCase();
+            if (!okRaw || blackValues.has(okRaw)) next.text.ok = defaultPresenterColors.text.ok;
+            return next;
+        }
+
+        function getSemanticState(mode, timeLeft) {
+            if (mode === 'target') return timeLeft <= 0 ? 'overflow' : 'ok';
+            if (mode !== 'countdown') return 'ok';
+            if (timeLeft <= 0) return 'overflow';
+            if (timeLeft <= 120) return 'warning';
+            return 'ok';
+        }
+
+        function applyPresenterColors(colors) {
+            const next = normalizePresenterColors(colors);
+            document.documentElement.style.setProperty('--ok', next.text.ok);
+            document.documentElement.style.setProperty('--warning', next.text.warning);
+            document.documentElement.style.setProperty('--overflow', next.text.overflow);
+            return next;
+        }
+
+        function formatCountdownSignedDDHHMMSS(timeLeftSeconds) {
+            const abs = Math.abs(timeLeftSeconds);
+            const days = Math.floor(abs / 86400);
+            const hours = Math.floor((abs % 86400) / 3600);
+            const mins = Math.floor((abs % 3600) / 60);
+            const secs = abs % 60;
+            if (days === 0) return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            const dayLabel = days === 1 ? 'day' : 'days';
+            return `${days.toString().padStart(2, '0')} ${dayLabel} ${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        window.addEventListener('resize', () => {
+            applyTimerGroupTransform(window.lastPosition, window.lastScale, window.lastMargin);
+        });
+
+        async function refreshDisplayConfig() {
+            try {
+                const res = await fetch('/api/display-config');
+                if (!res.ok) return;
+                const cfg = await res.json();
+                cachedDisplay = {
+                    position: Number(cfg.position ?? cachedDisplay.position),
+                    scale: Number(cfg.scale ?? cachedDisplay.scale),
+                    margin: Number(cfg.margin ?? cachedDisplay.margin),
+                    profile: String(cfg.profile || cachedDisplay.profile || 'program'),
+                };
+                applyTimerGroupTransform(cachedDisplay.position, cachedDisplay.scale, cachedDisplay.margin);
+                document.body.style.backgroundColor = cachedDisplay.profile === 'chroma_dsk' ? '#00ff00' : '#000000';
+            } catch (error) {
+                // Keep last good display config; avoid noisy console logs in live output
+            }
+        }
+        setInterval(refreshDisplayConfig, 2000);
+        refreshDisplayConfig();
+
+        socket.on('stateUpdate', (state) => {
+            currentMode = state.mode;
+            const display = state.displayConfig || state.display || cachedDisplay || {};
+            const position = state.position ?? display.position ?? 4;
+            const scale = state.scale ?? display.scale ?? 1;
+            const margin = state.margin ?? display.margin ?? 24;
+            const profile = state.profile || display.profile || 'program';
+            window.lastPosition = position;
+            window.lastScale = scale;
+            window.lastMargin = margin;
+            applyTimerGroupTransform(window.lastPosition, window.lastScale, window.lastMargin);
+            document.body.style.backgroundColor = profile === 'chroma_dsk' ? '#00ff00' : '#000000';
+
+            const semanticColors = applyPresenterColors(state.presenterColors);
+            const semanticState = getSemanticState(state.mode, state.timeLeft);
+
+            if (state.mode === 'timeofday') {
+                logoDisplay.style.display = 'none';
+                timerGroup.style.display = 'flex';
+                progressContainer.style.display = 'none';
+                clock.style.color = semanticColors.text.ok;
+                if (!localTimeInterval) {
+                    localTimeInterval = setInterval(() => {
+                        if (currentMode === 'timeofday') {
+                            clock.innerText = new Date().toLocaleTimeString('en-US', { hour12: false });
+                        }
+                    }, 1000);
+                }
+                clock.innerText = new Date().toLocaleTimeString('en-US', { hour12: false });
+            } else if (state.mode === 'logo') {
+                if (state.logoData && state.logoData.length > 50) {
+                    if (logoDisplay.getAttribute('src') !== state.logoData) logoDisplay.setAttribute('src', state.logoData);
+                    logoDisplay.style.display = 'block';
+                    timerGroup.style.display = 'none';
+                } else {
+                    logoDisplay.style.display = 'none';
+                    timerGroup.style.display = 'flex';
+                    clock.innerText = 'EVENT LOGO';
+                    clock.style.color = semanticColors.text.ok;
+                }
+                progressContainer.style.display = 'none';
+            } else {
+                logoDisplay.style.display = 'none';
+                timerGroup.style.display = 'flex';
+                progressContainer.style.display = 'block';
+                const timeStr = state.mode === 'target'
+                    ? formatCountdownSignedDDHHMMSS(state.timeLeft)
+                    : (() => {
+                        const absTime = Math.abs(state.timeLeft);
+                        const mins = Math.floor(absTime / 60);
+                        const secs = absTime % 60;
+                        return `${state.timeLeft < 0 ? '-' : ''}${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                    })();
+                clock.innerText = timeStr;
+                clock.style.color = semanticColors.text[semanticState] || semanticColors.text.ok;
+                clock.style.textShadow = semanticState === 'ok' ? 'none' : '0 0 16px rgba(0,0,0,0.35)';
+                timerPanel.style.backgroundColor = semanticColors.background[semanticState] || semanticColors.background.ok;
+
+                if (state.mode === 'countdown') {
+                    const progress = state.timeLeft <= 0 ? 0 : (state.timeLeft / state.initialTime) * 100;
+                    progressBar.style.width = `${progress}%`;
+                } else {
+                    progressBar.style.width = '100%';
+                }
+                progressBar.style.backgroundColor = semanticState === 'overflow'
+                    ? semanticColors.indicator.overflow
+                    : semanticState === 'warning'
+                        ? semanticColors.indicator.warning
+                        : semanticColors.indicator.ok;
+            }
+
+            if (state.showMessage && state.message) {
+                msgText.innerText = state.message;
+                msgContainer.style.display = 'flex';
+            } else {
+                msgContainer.style.display = 'none';
+            }
+        });
+
+        socket.on('disconnect', () => { clock.style.opacity = '0.3'; });
+        socket.on('connect', () => { clock.style.opacity = '1'; });
+    </script>
+</body>
+</html>
