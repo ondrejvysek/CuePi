@@ -26,4 +26,4 @@ if [ -f "$LOADING_HTML" ]; then
 fi
 
 # Last-resort fallback if loading page is missing.
-exec chromium --kiosk --noerrdialogs --disable-infobars --check-for-update-interval=31536000 "http://localhost:3000/presenter.html"
+exec chromium --kiosk --noerrdialogs --disable-infobars --check-for-update-interval=31536000 "http://localhost:3000/hdmi"
