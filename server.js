@@ -258,6 +258,35 @@ function sanitizePresenterColors(colors) {
   };
 }
 
+function sanitizeDskBranding(branding) {
+  const input = (branding && typeof branding === 'object') ? branding : {};
+  const defaults = {
+    panelColor: '#111111',
+    panelRadius: 28,
+    panelPaddingVh: 1.6,
+    panelPaddingVw: 2.2,
+    panelSemanticBackground: true,
+    panelTransparent: false,
+    progressEnabled: true,
+    text: { ok: '#ffffff', warning: '#f97316', overflow: '#ef4444' },
+    panelBackground: { ok: '#111111', warning: '#111111', overflow: '#111111' },
+    progress: { ok: '#ffffff', warning: '#f97316', overflow: '#ef4444' },
+  };
+  const safe = {
+    panelColor: isAcceptedColorFormat(input.panelColor) ? String(input.panelColor).trim() : defaults.panelColor,
+    panelRadius: Number.isFinite(Number(input.panelRadius)) ? Math.min(80, Math.max(0, Math.round(Number(input.panelRadius)))) : defaults.panelRadius,
+    panelPaddingVh: Number.isFinite(Number(input.panelPaddingVh)) ? Math.min(8, Math.max(0, Number(input.panelPaddingVh))) : defaults.panelPaddingVh,
+    panelPaddingVw: Number.isFinite(Number(input.panelPaddingVw)) ? Math.min(8, Math.max(0, Number(input.panelPaddingVw))) : defaults.panelPaddingVw,
+    panelSemanticBackground: input.panelSemanticBackground === undefined ? defaults.panelSemanticBackground : Boolean(input.panelSemanticBackground),
+    panelTransparent: input.panelTransparent === undefined ? defaults.panelTransparent : Boolean(input.panelTransparent),
+    progressEnabled: input.progressEnabled === undefined ? defaults.progressEnabled : Boolean(input.progressEnabled),
+    text: sanitizePresenterColors({ text: input.text || defaults.text }).text,
+    panelBackground: sanitizePresenterColors({ text: input.panelBackground || defaults.panelBackground }).text,
+    progress: sanitizePresenterColors({ text: input.progress || defaults.progress }).text,
+  };
+  return safe;
+}
+
 function sanitizeDisplayConfig(nextDisplay) {
   const merged = {
     ...(bootData.display || {}),
@@ -271,6 +300,17 @@ function sanitizeDisplayConfig(nextDisplay) {
   const profileLegacyMapping = profileToLegacy[profile] || profileToLegacy.program;
   const rawSchemaVersion = Number(merged.schemaVersion);
   const rawProfileVersion = Number(merged.profileVersion);
+  const legacyPositionMap = { top: 1, center: 4, bottom: 7 };
+  const rawPosition = merged.position;
+  const numericPosition = Number(rawPosition);
+  const normalizedPosition = Number.isInteger(numericPosition) && numericPosition >= 0 && numericPosition <= 8
+    ? numericPosition
+    : legacyPositionMap[String(rawPosition || '').trim()] ?? 4;
+  const numericScale = Number(merged.scale);
+  const normalizedScale = Number.isFinite(numericScale) ? Math.min(3, Math.max(0.5, numericScale)) : 1;
+  const numericMargin = Number(merged.margin);
+  const normalizedMargin = Number.isFinite(numericMargin) ? Math.min(200, Math.max(0, Math.round(numericMargin))) : 24;
+  const hdmiView = ['presenter', 'presenter_dsk'].includes(String(merged.hdmiView || '').trim()) ? String(merged.hdmiView).trim() : 'presenter';
 
   return {
     ...merged,
@@ -282,7 +322,12 @@ function sanitizeDisplayConfig(nextDisplay) {
       : displayProfileVersion(),
     profile,
     keyMode: profileLegacyMapping.keyMode,
+    position: normalizedPosition,
+    scale: normalizedScale,
+    margin: normalizedMargin,
+    hdmiView,
     presenterColors: sanitizePresenterColors(merged.presenterColors),
+    dskBranding: sanitizeDskBranding(merged.dskBranding),
   };
 }
 
@@ -309,9 +354,16 @@ function validateDisplayConfigPayload(payload) {
   if (payload.profileVersion !== undefined && !numberField(payload.profileVersion, 'profileVersion', { integer: true, min: 1 }).ok) details.push('profileVersion must be an integer >= 1');
   if (payload.profile !== undefined && !enumField(payload.profile, 'profile', ['program', 'chroma_dsk', 'luma_dsk']).ok) details.push('profile must be one of: program, chroma_dsk, luma_dsk');
   if (payload.keyMode !== undefined && !enumField(payload.keyMode, 'keyMode', ['none', 'small', 'large', 'chroma', 'luma']).ok) details.push('keyMode must be one of: none, small, large, chroma, luma');
-  if (payload.position !== undefined && !enumField(payload.position, 'position', ['top', 'center', 'bottom']).ok) details.push('position must be one of: top, center, bottom');
+  if (payload.position !== undefined) {
+    const rawPosition = payload.position;
+    const numericPosition = Number(rawPosition);
+    const legacyOk = enumField(rawPosition, 'position', ['top', 'center', 'bottom']).ok;
+    const anchorOk = Number.isInteger(numericPosition) && numericPosition >= 0 && numericPosition <= 8;
+    if (!legacyOk && !anchorOk) details.push('position must be anchor index 0..8 or one of: top, center, bottom');
+  }
   if (payload.scale !== undefined && !numberField(payload.scale, 'scale', { min: 0.5, max: 3 }).ok) details.push('scale must be >= 0.5 and <= 3');
   if (payload.margin !== undefined && !numberField(payload.margin, 'margin', { integer: true, min: 0, max: 200 }).ok) details.push('margin must be >= 0 and <= 200');
+  if (payload.hdmiView !== undefined && !enumField(payload.hdmiView, 'hdmiView', ['presenter', 'presenter_dsk']).ok) details.push('hdmiView must be one of: presenter, presenter_dsk');
   if (payload.presenterColors !== undefined) {
     const groups = ['text', 'background', 'indicator'];
     const levels = ['ok', 'warning', 'overflow'];
@@ -325,6 +377,10 @@ function validateDisplayConfigPayload(payload) {
         }
       }
     }
+  }
+  if (payload.dskBranding !== undefined) {
+    const b = payload.dskBranding;
+    if (!b || typeof b !== 'object' || Array.isArray(b)) details.push('dskBranding must be an object');
   }
   return { ok: details.length === 0, details };
 }
@@ -364,6 +420,10 @@ app.get('/icon.svg', (req, res) => {
 app.get('/api/state', (req, res) => res.json(publicState()));
 app.get('/presenter.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'presenter.html'));
+});
+app.get('/hdmi', (req, res) => {
+  const target = displayConfig && displayConfig.hdmiView === 'presenter_dsk' ? '/presenter-dsk.html' : '/presenter.html';
+  res.redirect(target);
 });
 app.get('/api/messages', (req, res) => res.json(quickMessages));
 
