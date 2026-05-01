@@ -177,7 +177,7 @@
             timerPanel.style.borderRadius = `${Number(d.panelRadius ?? 28)}px`;
             timerPanel.style.padding = `${Number(d.panelPaddingVh ?? 1.6)}vh ${Number(d.panelPaddingVw ?? 2.2)}vw`;
             const selectedPanel = useSemantic
-                ? (panelBg[semanticState] || panelBg.ok || d.panelColor || '#111111')
+                ? (d.panelColor || panelBg[semanticState] || panelBg.ok || '#111111')
                 : (d.panelColor || '#111111');
             timerPanel.style.backgroundColor = d.panelTransparent ? 'transparent' : selectedPanel;
         }
@@ -241,6 +241,10 @@
                 applyTimerGroupTransform(cachedDisplay.position, cachedDisplay.scale, cachedDisplay.margin);
                 document.body.style.backgroundColor = cachedDisplay.profile === 'chroma_dsk' ? '#00ff00' : '#000000';
                 applyDskBranding(cachedDisplay.dskBranding, currentSemanticState);
+                const showProgress = (cachedDisplay.dskBranding?.progressEnabled !== false);
+                if (currentMode === 'countdown' || currentMode === 'countup' || currentMode === 'target') {
+                    progressContainer.style.display = showProgress ? 'block' : 'none';
+                }
             } catch (error) {
                 // Keep last good display config; avoid noisy console logs in live output
             }
