@@ -104,8 +104,6 @@
 
         .hidden { display: none; }
         .anchor-active { outline: 2px solid #22c55e !important; box-shadow: 0 0 0 2px rgba(34,197,94,0.25) inset; }
-        .presenter-out-columns { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
-        @media (max-width: 980px) { .presenter-out-columns { grid-template-columns: 1fr; } }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
@@ -262,12 +260,11 @@
         </div>
     </div>
     <div id="branding-colors-modal" class="modal-overlay">
-        <div class="modal-content" style="width:min(1120px,96vw); max-height:90vh; overflow:auto;">
+        <div class="modal-content" style="width:min(760px,96vw);">
             <div class="modal-title">
                 BRANDING COLORS
                 <button onclick="closeBrandingColorsModal()" style="background:none; border:none; color:white; font-size:20px; cursor:pointer;">×</button>
             </div>
-            <div class="presenter-out-columns">
             <div class="sys-group" style="margin-bottom:0;">
                 <h3>Event branding and color config</h3>
                 <p style="font-size:11px; color:var(--text-dim); margin-top:-8px;">Semantic colors (ok/warning/overflow) for timer text, background, and indicator.</p>
@@ -355,7 +352,7 @@
                     <button onclick="savePresenterPlacement()" class="sys-btn">SAVE</button>
                 </div>
             </div>
-            <div class="sys-group" style="margin-bottom:0;">
+            <div class="sys-group" style="margin-top:12px; margin-bottom:0;">
                 <h3>DSK branding</h3>
                 <p style="font-size:11px; color:var(--text-dim); margin:0 0 8px 0; text-align:center;">Panel + Digits (OK / Warn / Overflow) + Progress (OK / Warn / Overflow)</p>
                 <div class="sys-row" style="display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:8px;">
@@ -380,7 +377,6 @@
                     <span id="dsk-branding-status" style="font-size:11px; color:#86efac; display:none;">Applied ✓</span>
                     <button onclick="saveDskBranding()" class="sys-btn">SAVE DSK BRANDING</button>
                 </div>
-            </div>
             </div>
         </div>
     </div>
@@ -1075,7 +1071,6 @@
                 const res = await apiPost('/api/display-config', { hdmiView: next });
                 const data = await res.json();
                 if (hdmiEl) hdmiEl.value = String((data.displayConfig || {}).hdmiView || 'presenter');
-                closePresenterOutModal();
                 document.getElementById('hdmi-apply-modal').classList.add('active');
             } catch (error) {
                 alert(`Save failed: ${error.message}`);
