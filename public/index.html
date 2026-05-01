@@ -202,6 +202,16 @@
             </div>
         </div>
     </div>
+    <div id="hdmi-apply-modal" class="modal-overlay">
+        <div class="modal-content" style="width: 460px; text-align: center;">
+            <h3 style="color:#86efac; margin-top:0;">HDMI VIEW SAVED</h3>
+            <p style="color: var(--text-dim); margin-bottom: 20px;">Setting is saved and will persist after reboot.<br>Apply now by reloading HDMI output?</p>
+            <div class="btn-grid">
+                <button onclick="closeHdmiApplyModal()" class="btn btn-dim" style="padding: 15px;">LATER</button>
+                <button onclick="applyHdmiNow()" class="btn btn-toggle-on" style="padding: 15px; flex-direction: row;">APPLY NOW</button>
+            </div>
+        </div>
+    </div>
 
     <div id="target-modal" class="modal-overlay">
         <div class="modal-content" style="width: min(620px, 96vw);">
@@ -1061,13 +1071,20 @@
                 const res = await apiPost('/api/display-config', { hdmiView: next });
                 const data = await res.json();
                 if (hdmiEl) hdmiEl.value = String((data.displayConfig || {}).hdmiView || 'presenter');
-                const shouldRestart = confirm('HDMI view saved and will persist across reboot.\n\nApply now without reboot? This restarts CuePi service (about 10-20s).');
-                if (shouldRestart) {
-                    await apiPost('/api/system/restart', {});
-                    alert('CuePi is restarting now. HDMI output will reload with the saved view.');
-                }
+                document.getElementById('hdmi-apply-modal').classList.add('active');
             } catch (error) {
                 alert(`Save failed: ${error.message}`);
+            }
+        }
+        function closeHdmiApplyModal() {
+            document.getElementById('hdmi-apply-modal').classList.remove('active');
+        }
+        async function applyHdmiNow() {
+            try {
+                await apiPost('/api/system/reload-hdmi', {});
+                closeHdmiApplyModal();
+            } catch (error) {
+                alert(`Apply failed: ${error.message}`);
             }
         }
 
