@@ -188,45 +188,6 @@
                 </div>
             </div>
 
-            <div class="sys-group">
-                <h3>Display profile</h3>
-                <div class="sys-row">
-                    <select id="display-profile-selector" class="sys-input">
-                        <option value="program">Program (safe)</option>
-                        <option value="chroma_dsk">Chroma DSK (green key background)</option>
-                        <option value="luma_dsk">Luma DSK (black/white luminance style)</option>
-                    </select>
-                    <button onclick="saveDisplayProfile()" class="sys-btn">SAVE</button>
-                </div>
-            </div>
-
-            <div class="sys-group">
-                <h3>Presenter placement</h3>
-                <div class="sys-row" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;">
-                    <button class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(0)">↖ Top Left</button>
-                    <button class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(1)">↑ Top</button>
-                    <button class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(2)">↗ Top Right</button>
-                    <button class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(3)">← Left</button>
-                    <button class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(4)">• Center</button>
-                    <button class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(5)">→ Right</button>
-                    <button class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(6)">↙ Bottom Left</button>
-                    <button class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(7)">↓ Bottom</button>
-                    <button class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(8)">↘ Bottom Right</button>
-                </div>
-                <div class="sys-row" style="margin-top:10px;">
-                    <label style="flex:1; font-size:11px; color:var(--text-dim);">Scale
-                        <input id="presenter-scale" type="range" min="0.5" max="3" step="0.05" class="sys-input">
-                    </label>
-                    <label style="flex:1; font-size:11px; color:var(--text-dim);">Margin
-                        <input id="presenter-margin" type="range" min="0" max="200" step="1" class="sys-input">
-                    </label>
-                </div>
-                <div class="sys-row" style="margin-top:6px;">
-                    <span id="presenter-placement-readout" style="font-size:11px; color:var(--text-dim);">Anchor 4 · Scale 1.00 · Margin 24px</span>
-                    <button onclick="savePresenterPlacement()" class="sys-btn">SAVE</button>
-                </div>
-            </div>
-
         </div>
     </div>
 
@@ -324,11 +285,59 @@
         </div>
     </div>
 
+    <div id="presenter-out-modal" class="modal-overlay">
+        <div class="modal-content" style="width:min(760px,96vw);">
+            <div class="modal-title">
+                PRESENTER OUT / DSK
+                <button onclick="closePresenterOutModal()" style="background:none; border:none; color:white; font-size:20px; cursor:pointer;">×</button>
+            </div>
+            <div class="sys-group">
+                <h3>Display profile</h3>
+                <p style="font-size:11px; color:var(--text-dim); margin-top:-8px;">Choose how presenter output is keyed/composited for program/DSK workflows.</p>
+                <div class="sys-row">
+                    <select id="display-profile-selector" class="sys-input">
+                        <option value="program">Program (safe)</option>
+                        <option value="chroma_dsk">Chroma DSK (green key background)</option>
+                        <option value="luma_dsk">Luma DSK (black/white luminance style)</option>
+                    </select>
+                    <button onclick="saveDisplayProfile()" class="sys-btn">SAVE</button>
+                </div>
+            </div>
+            <div class="sys-group" style="margin-bottom:0;">
+                <h3>Presenter placement</h3>
+                <div class="sys-row" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;">
+                    <button class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(0)">↖ Top Left</button>
+                    <button class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(1)">↑ Top</button>
+                    <button class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(2)">↗ Top Right</button>
+                    <button class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(3)">← Left</button>
+                    <button class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(4)">• Center</button>
+                    <button class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(5)">→ Right</button>
+                    <button class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(6)">↙ Bottom Left</button>
+                    <button class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(7)">↓ Bottom</button>
+                    <button class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(8)">↘ Bottom Right</button>
+                </div>
+                <div class="sys-row" style="margin-top:10px;">
+                    <label style="flex:1; font-size:11px; color:var(--text-dim);">Scale
+                        <input id="presenter-scale" type="range" min="0.5" max="3" step="0.05" class="sys-input">
+                    </label>
+                    <label style="flex:1; font-size:11px; color:var(--text-dim);">Margin
+                        <input id="presenter-margin" type="range" min="0" max="200" step="1" class="sys-input">
+                    </label>
+                </div>
+                <div class="sys-row" style="margin-top:6px;">
+                    <span id="presenter-placement-readout" style="font-size:11px; color:var(--text-dim);">Anchor 4 · Scale 1.00 · Margin 24px</span>
+                    <button onclick="savePresenterPlacement()" class="sys-btn">SAVE</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <header>
             <div style="font-weight: 900; font-size: 24px;">CuePi <span style="font-size: 12px; opacity: 0.5; font-weight: normal;">Moderator</span></div>
             <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
                 <div class="ip-badge" id="ip-display">Connecting...</div>
+                <button onclick="openPresenterOutModal()" class="btn-header-danger" style="background:var(--card); color:#86efac; border-color:rgba(34,197,94,0.45);">🟩 PRESENTER OUT</button>
                 <button onclick="openConfigTransferModal()" class="btn-header-danger" style="background:var(--card); color:#93c5fd; border-color:rgba(96,165,250,0.4);">⤴ CONFIG</button>
                 <button id="btn-audio" onclick="toggleAudio()" class="btn-header-danger" style="color:var(--text-dim); border-color:var(--border);">🔕 AUDIO OFF</button>
                 <button onclick="openSettings()" class="btn-header-danger" style="background:var(--card); color:white; border-color:var(--border);">⚙️ SETTINGS</button>
@@ -677,6 +686,8 @@
 
         function openConfigTransferModal() { document.getElementById('config-transfer-modal').classList.add('active'); }
         function closeConfigTransferModal() { document.getElementById('config-transfer-modal').classList.remove('active'); }
+        function openPresenterOutModal() { document.getElementById('presenter-out-modal').classList.add('active'); }
+        function closePresenterOutModal() { document.getElementById('presenter-out-modal').classList.remove('active'); }
 
         async function exportSystemConfig() {
             try {
