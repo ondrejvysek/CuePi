@@ -266,8 +266,10 @@ function sanitizeDskBranding(branding) {
     panelPaddingVh: 1.6,
     panelPaddingVw: 2.2,
     panelSemanticBackground: true,
+    panelTransparent: false,
     text: { ok: '#ffffff', warning: '#f97316', overflow: '#ef4444' },
     panelBackground: { ok: '#111111', warning: '#111111', overflow: '#111111' },
+    progress: { ok: '#ffffff', warning: '#f97316', overflow: '#ef4444' },
   };
   const safe = {
     panelColor: isAcceptedColorFormat(input.panelColor) ? String(input.panelColor).trim() : defaults.panelColor,
@@ -275,8 +277,10 @@ function sanitizeDskBranding(branding) {
     panelPaddingVh: Number.isFinite(Number(input.panelPaddingVh)) ? Math.min(8, Math.max(0, Number(input.panelPaddingVh))) : defaults.panelPaddingVh,
     panelPaddingVw: Number.isFinite(Number(input.panelPaddingVw)) ? Math.min(8, Math.max(0, Number(input.panelPaddingVw))) : defaults.panelPaddingVw,
     panelSemanticBackground: input.panelSemanticBackground === undefined ? defaults.panelSemanticBackground : Boolean(input.panelSemanticBackground),
+    panelTransparent: input.panelTransparent === undefined ? defaults.panelTransparent : Boolean(input.panelTransparent),
     text: sanitizePresenterColors({ text: input.text || defaults.text }).text,
     panelBackground: sanitizePresenterColors({ text: input.panelBackground || defaults.panelBackground }).text,
+    progress: sanitizePresenterColors({ text: input.progress || defaults.progress }).text,
   };
   return safe;
 }

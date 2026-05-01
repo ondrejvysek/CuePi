@@ -337,11 +337,21 @@
             </div>
             <div class="sys-group" style="margin-top:12px; margin-bottom:0;">
                 <h3>DSK branding</h3>
+                <p style="font-size:11px; color:var(--text-dim); margin-top:-8px;">Panel | Digits (OK/Warn/Overflow) | Progress (OK/Warn/Overflow)</p>
                 <div class="sys-row">
+                    <label style="font-size:11px; color:var(--text-dim);">Panel</label>
                     <input id="dsk-panel-color" type="color" class="sys-input" style="max-width:80px;">
+                    <label style="font-size:11px; color:var(--text-dim);">OK</label>
                     <input id="dsk-text-ok" type="color" class="sys-input" style="max-width:80px;">
+                    <label style="font-size:11px; color:var(--text-dim);">Warn</label>
                     <input id="dsk-text-warning" type="color" class="sys-input" style="max-width:80px;">
+                    <label style="font-size:11px; color:var(--text-dim);">Over</label>
                     <input id="dsk-text-overflow" type="color" class="sys-input" style="max-width:80px;">
+                </div>
+                <div class="sys-row">
+                    <label style="font-size:11px; color:var(--text-dim);">P-OK</label><input id="dsk-progress-ok" type="color" class="sys-input" style="max-width:80px;">
+                    <label style="font-size:11px; color:var(--text-dim);">P-Warn</label><input id="dsk-progress-warning" type="color" class="sys-input" style="max-width:80px;">
+                    <label style="font-size:11px; color:var(--text-dim);">P-Over</label><input id="dsk-progress-overflow" type="color" class="sys-input" style="max-width:80px;">
                 </div>
                 <div class="sys-row">
                     <label style="flex:1; font-size:11px; color:var(--text-dim);">Radius <input id="dsk-panel-radius" type="range" min="0" max="80" step="1" class="sys-input"></label>
@@ -350,6 +360,8 @@
                 </div>
                 <div class="sys-row" style="margin-bottom:0;">
                     <label style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-dim);"><input type="checkbox" id="dsk-panel-semantic-bg" checked> Semantic box background</label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-dim);"><input type="checkbox" id="dsk-panel-transparent"> Transparent panel</label>
+                    <span id="dsk-branding-status" style="font-size:11px; color:#86efac; display:none;">Applied ✓</span>
                     <button onclick="saveDskBranding()" class="sys-btn">SAVE DSK BRANDING</button>
                 </div>
             </div>
@@ -988,11 +1000,16 @@
                 set('dsk-text-ok', (d.text || {}).ok || '#ffffff');
                 set('dsk-text-warning', (d.text || {}).warning || '#f97316');
                 set('dsk-text-overflow', (d.text || {}).overflow || '#ef4444');
+                set('dsk-progress-ok', (d.progress || {}).ok || '#ffffff');
+                set('dsk-progress-warning', (d.progress || {}).warning || '#f97316');
+                set('dsk-progress-overflow', (d.progress || {}).overflow || '#ef4444');
                 set('dsk-panel-radius', d.panelRadius ?? 28);
                 set('dsk-panel-pad-vh', d.panelPaddingVh ?? 1.6);
                 set('dsk-panel-pad-vw', d.panelPaddingVw ?? 2.2);
                 const sem = document.getElementById('dsk-panel-semantic-bg');
                 if (sem) sem.checked = d.panelSemanticBackground !== false;
+                const transparent = document.getElementById('dsk-panel-transparent');
+                if (transparent) transparent.checked = d.panelTransparent === true;
             } catch (error) {
                 console.warn('Display config load failed:', error.message);
             }
@@ -1059,16 +1076,27 @@
                     panelPaddingVh: Number(document.getElementById('dsk-panel-pad-vh')?.value || 1.6),
                     panelPaddingVw: Number(document.getElementById('dsk-panel-pad-vw')?.value || 2.2),
                     panelSemanticBackground: !!document.getElementById('dsk-panel-semantic-bg')?.checked,
+                    panelTransparent: !!document.getElementById('dsk-panel-transparent')?.checked,
                     text: {
                         ok: document.getElementById('dsk-text-ok')?.value || '#ffffff',
                         warning: document.getElementById('dsk-text-warning')?.value || '#f97316',
                         overflow: document.getElementById('dsk-text-overflow')?.value || '#ef4444',
                     },
+                    progress: {
+                        ok: document.getElementById('dsk-progress-ok')?.value || '#ffffff',
+                        warning: document.getElementById('dsk-progress-warning')?.value || '#f97316',
+                        overflow: document.getElementById('dsk-progress-overflow')?.value || '#ef4444',
+                    },
                 },
             };
             try {
                 await apiPost('/api/display-config', payload);
-                alert('DSK branding saved.');
+                const statusEl = document.getElementById('dsk-branding-status');
+                if (statusEl) {
+                    statusEl.style.display = 'inline';
+                    statusEl.innerText = 'Applied ✓';
+                    setTimeout(() => { statusEl.style.display = 'none'; }, 1400);
+                }
             } catch (error) {
                 alert(`Save failed: ${error.message}`);
             }

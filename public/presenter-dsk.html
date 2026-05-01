@@ -47,6 +47,7 @@
             padding: 1.6vh 2.2vw;
             width: min(92vw, 1700px);
             box-sizing: border-box;
+            overflow: hidden;
         }
 
         #clock-container {
@@ -174,9 +175,9 @@
             clock.style.color = text[semanticState] || text.ok || '#ffffff';
             timerPanel.style.borderRadius = `${Number(d.panelRadius ?? 28)}px`;
             timerPanel.style.padding = `${Number(d.panelPaddingVh ?? 1.6)}vh ${Number(d.panelPaddingVw ?? 2.2)}vw`;
-            timerPanel.style.backgroundColor = useSemantic
+            timerPanel.style.backgroundColor = d.panelTransparent ? 'transparent' : (useSemantic
                 ? (panelBg[semanticState] || panelBg.ok || '#111111')
-                : (d.panelColor || '#111111');
+                : (d.panelColor || '#111111'));
         }
 
         function normalizePresenterColors(colors) {
@@ -311,10 +312,10 @@
                     progressBar.style.width = '100%';
                 }
                 progressBar.style.backgroundColor = semanticState === 'overflow'
-                    ? semanticColors.indicator.overflow
+                    ? ((dskBranding.progress || {}).overflow || '#ef4444')
                     : semanticState === 'warning'
-                        ? semanticColors.indicator.warning
-                        : semanticColors.indicator.ok;
+                        ? ((dskBranding.progress || {}).warning || '#f97316')
+                        : ((dskBranding.progress || {}).ok || '#ffffff');
             }
 
             if (state.showMessage && state.message) {
