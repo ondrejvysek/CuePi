@@ -108,12 +108,9 @@
         }
         #progress-bar { height: 100%; background: #22c55e; width: 100%; transition: width 1s linear, background-color 0.12s linear; }
 
-        #ip-overlay { position: absolute; top: 2vw; left: 2vw; color: rgba(255,255,255,0.4); font-family: monospace; font-size: 2vw; z-index: 100; }
     </style>
 </head>
 <body>
-    <div id="ip-overlay">Connecting...</div>
-
     <img id="logo-display" src="" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 85vw; max-height: 85vh; object-fit: contain; display: none;">
 
     <div id="timer-group">
@@ -138,13 +135,13 @@
         const progressContainer = document.getElementById('progress-container');
         const msgContainer = document.getElementById('msg-container');
         const msgText = document.getElementById('msg-text');
-        const ipOverlay = document.getElementById('ip-overlay');
         const logoDisplay = document.getElementById('logo-display');
         const timerGroup = document.getElementById('timer-group');
         const timerPanel = document.getElementById('timer-panel');
 
         let currentMode = 'countdown';
         let localTimeInterval = null;
+        let cachedDisplay = { position: 4, scale: 1, margin: 24, profile: 'program' };
 
         const ANCHORS = {
             0: { x: 0, y: 0 }, 1: { x: 0.5, y: 0 }, 2: { x: 1, y: 0 },
@@ -214,9 +211,29 @@
             applyTimerGroupTransform(window.lastPosition, window.lastScale, window.lastMargin);
         });
 
+        async function refreshDisplayConfig() {
+            try {
+                const res = await fetch('/api/display-config');
+                if (!res.ok) return;
+                const cfg = await res.json();
+                cachedDisplay = {
+                    position: Number(cfg.position ?? cachedDisplay.position),
+                    scale: Number(cfg.scale ?? cachedDisplay.scale),
+                    margin: Number(cfg.margin ?? cachedDisplay.margin),
+                    profile: String(cfg.profile || cachedDisplay.profile || 'program'),
+                };
+                applyTimerGroupTransform(cachedDisplay.position, cachedDisplay.scale, cachedDisplay.margin);
+                document.body.style.backgroundColor = cachedDisplay.profile === 'chroma_dsk' ? '#00ff00' : '#000000';
+            } catch (error) {
+                // Keep last good display config; avoid noisy console logs in live output
+            }
+        }
+        setInterval(refreshDisplayConfig, 2000);
+        refreshDisplayConfig();
+
         socket.on('stateUpdate', (state) => {
             currentMode = state.mode;
-            const display = state.displayConfig || state.display || {};
+            const display = state.displayConfig || state.display || cachedDisplay || {};
             const position = state.position ?? display.position ?? 4;
             const scale = state.scale ?? display.scale ?? 1;
             const margin = state.margin ?? display.margin ?? 24;
@@ -229,11 +246,6 @@
 
             const semanticColors = applyPresenterColors(state.presenterColors);
             const semanticState = getSemanticState(state.mode, state.timeLeft);
-
-            if (state.ip && !ipOverlay.dataset.hidden) {
-                ipOverlay.innerText = 'IP: ' + state.ip;
-                setTimeout(() => { ipOverlay.style.display = 'none'; ipOverlay.dataset.hidden = 'true'; }, 15000);
-            }
 
             if (state.mode === 'timeofday') {
                 logoDisplay.style.display = 'none';
