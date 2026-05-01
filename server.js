@@ -310,6 +310,7 @@ function sanitizeDisplayConfig(nextDisplay) {
   const normalizedScale = Number.isFinite(numericScale) ? Math.min(3, Math.max(0.5, numericScale)) : 1;
   const numericMargin = Number(merged.margin);
   const normalizedMargin = Number.isFinite(numericMargin) ? Math.min(200, Math.max(0, Math.round(numericMargin))) : 24;
+  const hdmiView = ['presenter', 'presenter_dsk'].includes(String(merged.hdmiView || '').trim()) ? String(merged.hdmiView).trim() : 'presenter';
 
   return {
     ...merged,
@@ -324,6 +325,7 @@ function sanitizeDisplayConfig(nextDisplay) {
     position: normalizedPosition,
     scale: normalizedScale,
     margin: normalizedMargin,
+    hdmiView,
     presenterColors: sanitizePresenterColors(merged.presenterColors),
     dskBranding: sanitizeDskBranding(merged.dskBranding),
   };
@@ -361,6 +363,7 @@ function validateDisplayConfigPayload(payload) {
   }
   if (payload.scale !== undefined && !numberField(payload.scale, 'scale', { min: 0.5, max: 3 }).ok) details.push('scale must be >= 0.5 and <= 3');
   if (payload.margin !== undefined && !numberField(payload.margin, 'margin', { integer: true, min: 0, max: 200 }).ok) details.push('margin must be >= 0 and <= 200');
+  if (payload.hdmiView !== undefined && !enumField(payload.hdmiView, 'hdmiView', ['presenter', 'presenter_dsk']).ok) details.push('hdmiView must be one of: presenter, presenter_dsk');
   if (payload.presenterColors !== undefined) {
     const groups = ['text', 'background', 'indicator'];
     const levels = ['ok', 'warning', 'overflow'];
@@ -417,6 +420,10 @@ app.get('/icon.svg', (req, res) => {
 app.get('/api/state', (req, res) => res.json(publicState()));
 app.get('/presenter.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'presenter.html'));
+});
+app.get('/hdmi', (req, res) => {
+  const target = displayConfig && displayConfig.hdmiView === 'presenter_dsk' ? '/presenter-dsk.html' : '/presenter.html';
+  res.redirect(target);
 });
 app.get('/api/messages', (req, res) => res.json(quickMessages));
 

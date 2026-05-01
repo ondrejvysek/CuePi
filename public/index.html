@@ -304,8 +304,15 @@
                     <button onclick="saveDisplayProfile()" class="sys-btn">SAVE</button>
                 </div>
                 <div class="sys-row" style="margin-top:10px; margin-bottom:0;">
-                    <button onclick="window.open('/presenter.html', '_blank')" class="sys-btn" style="flex:1; background:#334155;">OPEN CLASSIC PRESENTER</button>
-                    <button onclick="window.open('/presenter-dsk.html', '_blank')" class="sys-btn" style="flex:1;">OPEN DSK PRESENTER</button>
+                    <button onclick="openPresenterOutputWindow('/presenter.html')" class="sys-btn" style="flex:1; background:#334155;">OPEN CLASSIC PRESENTER</button>
+                    <button onclick="openPresenterOutputWindow('/presenter-dsk.html')" class="sys-btn" style="flex:1;">OPEN DSK PRESENTER</button>
+                </div>
+                <div class="sys-row" style="margin-top:8px; margin-bottom:0;">
+                    <select id="hdmi-view-selector" class="sys-input">
+                        <option value="presenter">HDMI: Classic Presenter</option>
+                        <option value="presenter_dsk">HDMI: DSK Presenter</option>
+                    </select>
+                    <button onclick="saveHdmiView()" class="sys-btn">SAVE HDMI VIEW</button>
                 </div>
             </div>
             <div class="sys-group" style="margin-bottom:0;">
@@ -603,6 +610,9 @@
             const numericAnchor = Number(anchor);
             presenterPosition = (Number.isInteger(numericAnchor) && numericAnchor >= 0 && numericAnchor <= 8) ? numericAnchor : 4;
             updatePresenterPlacementReadout();
+        }
+        function openPresenterOutputWindow(pathname) {
+            window.open(pathname, '_blank', 'popup=yes,menubar=no,toolbar=no,location=no,status=no,scrollbars=no,resizable=yes,width=1920,height=1080');
         }
         function refreshDskColorPreviews() {
             ['dsk-panel-color','dsk-text-ok','dsk-text-warning','dsk-text-overflow','dsk-progress-ok','dsk-progress-warning','dsk-progress-overflow'].forEach((id) => {
@@ -990,8 +1000,10 @@
                 timeFormatPreference = String(data.timeFormat || 'auto');
                 const formatEl = document.getElementById('time-format-selector');
                 const profileEl = document.getElementById('display-profile-selector');
+                const hdmiEl = document.getElementById('hdmi-view-selector');
                 if (formatEl) formatEl.value = timeFormatPreference;
                 if (profileEl) profileEl.value = String(data.profile || 'program');
+                if (hdmiEl) hdmiEl.value = String(data.hdmiView || 'presenter');
                 presenterPosition = Number.isInteger(Number(data.position)) ? Number(data.position) : 4;
                 presenterScale = Number.isFinite(Number(data.scale)) ? Number(data.scale) : 1;
                 presenterMargin = Number.isFinite(Number(data.margin)) ? Number(data.margin) : 24;
@@ -1038,6 +1050,80 @@
                 const data = await res.json();
                 const savedProfile = String((data.displayConfig || {}).profile || 'program');
                 if (profileEl) profileEl.value = savedProfile;
+            } catch (error) {
+                alert(`Save failed: ${error.message}`);
+            }
+        }
+        async function saveHdmiView() {
+            const hdmiEl = document.getElementById('hdmi-view-selector');
+            const next = String(hdmiEl?.value || 'presenter');
+            try {
+                const res = await apiPost('/api/display-config', { hdmiView: next });
+                const data = await res.json();
+                if (hdmiEl) hdmiEl.value = String((data.displayConfig || {}).hdmiView || 'presenter');
+            } catch (error) {
+                alert(`Save failed: ${error.message}`);
+            }
+        }
+
+        async function savePresenterPlacement() {
+            const scaleEl = document.getElementById('presenter-scale');
+            const marginEl = document.getElementById('presenter-margin');
+            presenterScale = Math.min(3, Math.max(0.5, Number(scaleEl?.value || presenterScale || 1)));
+            presenterMargin = Math.min(200, Math.max(0, Math.round(Number(marginEl?.value || presenterMargin || 24))));
+            updatePresenterPlacementReadout();
+            try {
+                const res = await apiPost('/api/display-config', {
+                    position: presenterPosition,
+                    scale: presenterScale,
+                    margin: presenterMargin,
+                });
+                const data = await res.json();
+                presenterPosition = Number((data.displayConfig || {}).position ?? presenterPosition);
+                presenterScale = Number((data.displayConfig || {}).scale ?? presenterScale);
+                presenterMargin = Number((data.displayConfig || {}).margin ?? presenterMargin);
+                updatePresenterPlacementReadout();
+                const statusEl = document.getElementById('presenter-placement-status');
+                if (statusEl) {
+                    statusEl.style.display = 'inline';
+                    statusEl.innerText = 'Applied ✓';
+                    setTimeout(() => { statusEl.style.display = 'none'; }, 1400);
+                }
+            } catch (error) {
+                alert(`Save failed: ${error.message}`);
+            }
+        }
+
+        async function saveDskBranding() {
+            const payload = {
+                dskBranding: {
+                    panelColor: document.getElementById('dsk-panel-color')?.value || '#111111',
+                    panelRadius: Number(document.getElementById('dsk-panel-radius')?.value || 28),
+                    panelPaddingVh: Number(document.getElementById('dsk-panel-pad-vh')?.value || 1.6),
+                    panelPaddingVw: Number(document.getElementById('dsk-panel-pad-vw')?.value || 2.2),
+                    panelSemanticBackground: true,
+                    panelTransparent: !!document.getElementById('dsk-panel-transparent')?.checked,
+                    progressEnabled: !!document.getElementById('dsk-progress-enabled')?.checked,
+                    text: {
+                        ok: document.getElementById('dsk-text-ok')?.value || '#ffffff',
+                        warning: document.getElementById('dsk-text-warning')?.value || '#f97316',
+                        overflow: document.getElementById('dsk-text-overflow')?.value || '#ef4444',
+                    },
+                    progress: {
+                        ok: document.getElementById('dsk-progress-ok')?.value || '#ffffff',
+                        warning: document.getElementById('dsk-progress-warning')?.value || '#f97316',
+                        overflow: document.getElementById('dsk-progress-overflow')?.value || '#ef4444',
+                    },
+                },
+            };
+            try {
+                await apiPost('/api/display-config', payload);
+                const statusEl = document.getElementById('dsk-branding-status');
+                if (statusEl) {
+                    statusEl.style.display = 'inline';
+                    statusEl.innerText = 'Applied ✓';
+                    setTimeout(() => { statusEl.style.display = 'none'; }, 1400);
+                }
             } catch (error) {
                 alert(`Save failed: ${error.message}`);
             }
