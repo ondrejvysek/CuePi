@@ -104,6 +104,16 @@
 
         .hidden { display: none; }
         .anchor-active { outline: 2px solid #22c55e !important; box-shadow: 0 0 0 2px rgba(34,197,94,0.25) inset; }
+
+        .presenter-out-modal-content { width:min(1280px,96vw); background: radial-gradient(circle at 30% 20%, rgba(30,58,138,0.25), rgba(2,6,23,0.95) 55%), #020617; border:1px solid rgba(71,85,105,0.7); }
+        .presenter-out-grid { display:grid; grid-template-columns: 1fr 1fr; gap:18px; }
+        .presenter-out-panel { background: rgba(2,6,23,0.65); border:1px solid rgba(71,85,105,0.55); border-radius:14px; padding:16px; }
+        .presenter-out-panel h3 { font-size:18px; color:#dbeafe; text-transform:none; letter-spacing:.5px; margin:0; }
+        .presenter-out-sub { color:#94a3b8; font-size:11px; margin:8px 0 0 0; }
+        .presenter-out-bottom { display:flex; justify-content:space-between; gap:12px; border-top:1px solid rgba(71,85,105,.5); margin-top:16px; padding-top:14px; }
+        .presenter-out-chip { border:1px solid rgba(71,85,105,.8); background:rgba(15,23,42,.8); border-radius:10px; color:#e2e8f0; padding:8px 12px; min-width:84px; text-align:center; }
+        .presenter-out-row3 { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:10px; }
+
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
@@ -297,86 +307,60 @@
     </div>
 
     <div id="presenter-out-modal" class="modal-overlay">
-        <div class="modal-content" style="width:min(760px,96vw);">
-            <div class="modal-title">
+        <div class="modal-content presenter-out-modal-content">
+            <div class="modal-title" style="font-size:52px; letter-spacing:1px;">
                 PRESENTER OUT / DSK
-                <button onclick="closePresenterOutModal()" style="background:none; border:none; color:white; font-size:20px; cursor:pointer;">×</button>
+                <button onclick="closePresenterOutModal()" style="background:none; border:none; color:white; font-size:42px; cursor:pointer;">×</button>
             </div>
-            <div class="sys-group">
-                <h3>Display profile</h3>
-                <p style="font-size:11px; color:var(--text-dim); margin-top:-8px;">Choose how presenter output is keyed/composited for program/DSK workflows.</p>
-                <div class="sys-row">
-                    <select id="display-profile-selector" class="sys-input">
-                        <option value="program">Program (safe)</option>
-                        <option value="chroma_dsk">Chroma DSK (green key background)</option>
-                        <option value="luma_dsk">Luma DSK (black/white luminance style)</option>
-                    </select>
-                    <button onclick="saveDisplayProfile()" class="sys-btn">SAVE</button>
+            <div class="presenter-out-grid">
+                <div>
+                    <div class="presenter-out-panel" style="margin-bottom:14px;">
+                        <h3>Output</h3>
+                        <p class="presenter-out-sub">Choose how presenter output is keyed/composited for program/DSK workflows.</p>
+                        <label style="font-size:12px; color:#cbd5e1; margin-top:10px; display:block;">Display Profile</label>
+                        <div class="sys-row" style="margin-top:8px;">
+                            <select id="display-profile-selector" class="sys-input">
+                                <option value="program">Program (safe)</option>
+                                <option value="chroma_dsk">Chroma DSK (green key background)</option>
+                                <option value="luma_dsk">Luma DSK (black/white luminance style)</option>
+                            </select>
+                        </div>
+                        <div class="sys-row" style="margin-top:10px; margin-bottom:0;">
+                            <button onclick="openPresenterOutputWindow('/presenter.html')" class="sys-btn" style="flex:1; background:#334155;">OPEN CLASSIC PRESENTER</button>
+                            <button onclick="openPresenterOutputWindow('/presenter-dsk.html')" class="sys-btn" style="flex:1;">OPEN DSK PRESENTER</button>
+                        </div>
+                        <label style="font-size:12px; color:#cbd5e1; margin-top:12px; display:block;">HDMI Output</label>
+                        <div class="sys-row" style="margin-top:8px; margin-bottom:0;">
+                            <select id="hdmi-view-selector" class="sys-input"><option value="presenter">HDMI: Classic Presenter</option><option value="presenter_dsk">HDMI: DSK Presenter</option></select>
+                            <button onclick="saveHdmiView()" class="sys-btn">APPLY HDMI VIEW</button>
+                        </div>
+                        <p class="presenter-out-sub">Applying HDMI view will restart the output.</p>
+                    </div>
+                    <div class="presenter-out-panel">
+                        <h3>Presenter placement</h3>
+                        <div class="sys-row" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; margin-top:10px;">
+                            <button data-anchor="0" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(0)">↖</button><button data-anchor="1" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(1)">↑</button><button data-anchor="2" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(2)">↗</button>
+                            <button data-anchor="3" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(3)">←</button><button data-anchor="4" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(4)">•</button><button data-anchor="5" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(5)">→</button>
+                            <button data-anchor="6" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(6)">↙</button><button data-anchor="7" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(7)">↓</button><button data-anchor="8" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(8)">↘</button>
+                        </div>
+                        <div class="sys-row" style="margin-top:10px;"><label style="flex:1; font-size:11px; color:var(--text-dim);">Scale<input id="presenter-scale" type="range" min="0.5" max="3" step="0.05" class="sys-input"></label><div class="presenter-out-chip" id="scale-chip">100%</div></div>
+                        <div class="sys-row" style="margin-top:6px; margin-bottom:0;"><label style="flex:1; font-size:11px; color:var(--text-dim);">Margin<input id="presenter-margin" type="range" min="0" max="200" step="1" class="sys-input"></label><div class="presenter-out-chip" id="margin-chip">24 px</div></div>
+                        <div class="sys-row" style="margin-top:8px;"><span id="presenter-placement-readout" style="font-size:11px; color:var(--text-dim);">Anchor 4 · Scale 1.00 · Margin 24px</span><span id="presenter-placement-status" style="font-size:11px; color:#86efac; display:none;">Applied ✓</span><button onclick="savePresenterPlacement()" class="sys-btn">SAVE</button></div>
+                    </div>
                 </div>
-                <div class="sys-row" style="margin-top:10px; margin-bottom:0;">
-                    <button onclick="openPresenterOutputWindow('/presenter.html')" class="sys-btn" style="flex:1; background:#334155;">OPEN CLASSIC PRESENTER</button>
-                    <button onclick="openPresenterOutputWindow('/presenter-dsk.html')" class="sys-btn" style="flex:1;">OPEN DSK PRESENTER</button>
-                </div>
-                <div class="sys-row" style="margin-top:8px; margin-bottom:0;">
-                    <select id="hdmi-view-selector" class="sys-input">
-                        <option value="presenter">HDMI: Classic Presenter</option>
-                        <option value="presenter_dsk">HDMI: DSK Presenter</option>
-                    </select>
-                    <button onclick="saveHdmiView()" class="sys-btn">SAVE HDMI VIEW</button>
-                </div>
-            </div>
-            <div class="sys-group" style="margin-bottom:0;">
-                <h3>Presenter placement</h3>
-                <div class="sys-row" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;">
-                    <button data-anchor="0" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(0)">↖ Top Left</button>
-                    <button data-anchor="1" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(1)">↑ Top</button>
-                    <button data-anchor="2" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(2)">↗ Top Right</button>
-                    <button data-anchor="3" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(3)">← Left</button>
-                    <button data-anchor="4" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(4)">• Center</button>
-                    <button data-anchor="5" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(5)">→ Right</button>
-                    <button data-anchor="6" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(6)">↙ Bottom Left</button>
-                    <button data-anchor="7" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(7)">↓ Bottom</button>
-                    <button data-anchor="8" class="sys-btn" style="width:100%;" onclick="setPresenterAnchor(8)">↘ Bottom Right</button>
-                </div>
-                <div class="sys-row" style="margin-top:10px;">
-                    <label style="flex:1; font-size:11px; color:var(--text-dim);">Scale
-                        <input id="presenter-scale" type="range" min="0.5" max="3" step="0.05" class="sys-input">
-                    </label>
-                    <label style="flex:1; font-size:11px; color:var(--text-dim);">Margin
-                        <input id="presenter-margin" type="range" min="0" max="200" step="1" class="sys-input">
-                    </label>
-                </div>
-                <div class="sys-row" style="margin-top:6px;">
-                    <span id="presenter-placement-readout" style="font-size:11px; color:var(--text-dim);">Anchor 4 · Scale 1.00 · Margin 24px</span>
-                    <span id="presenter-placement-status" style="font-size:11px; color:#86efac; display:none;">Applied ✓</span>
-                    <button onclick="savePresenterPlacement()" class="sys-btn">SAVE</button>
+                <div class="presenter-out-panel" style="margin-bottom:0;">
+                    <div class="sys-row" style="justify-content:space-between; align-items:center; margin-bottom:10px;"><h3>DSK branding</h3><button onclick="loadDskBrandingDefaults()" class="sys-btn" style="background:#334155;">LOAD DEFAULT COLORS</button></div>
+                    <div class="presenter-out-row3" style="grid-template-columns:repeat(4,minmax(0,1fr));"><div style="text-align:center;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">Panel</div><input id="dsk-panel-color" type="color" class="sys-input" style="width:100%;"></div><div style="text-align:center;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">OK</div><input id="dsk-text-ok" type="color" class="sys-input" style="width:100%;"></div><div style="text-align:center;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">Warn</div><input id="dsk-text-warning" type="color" class="sys-input" style="width:100%;"></div><div style="text-align:center;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">Over</div><input id="dsk-text-overflow" type="color" class="sys-input" style="width:100%;"></div></div>
+                    <div class="presenter-out-row3" style="margin-top:10px;"><div style="text-align:center;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">Progress OK</div><input id="dsk-progress-ok" type="color" class="sys-input" style="width:100%;"></div><div style="text-align:center;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">Progress Warn</div><input id="dsk-progress-warning" type="color" class="sys-input" style="width:100%;"></div><div style="text-align:center;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">Progress Over</div><input id="dsk-progress-overflow" type="color" class="sys-input" style="width:100%;"></div></div>
+                    <hr style="border-color:rgba(71,85,105,.4); margin:14px 0;">
+                    <div style="font-size:13px; color:#cbd5e1; margin-bottom:8px;">Advanced</div>
+                    <div class="presenter-out-row3"><label style="font-size:11px; color:var(--text-dim);">Radius <input id="dsk-panel-radius" type="range" min="0" max="80" step="1" class="sys-input"></label><label style="font-size:11px; color:var(--text-dim);">Pad VH <input id="dsk-panel-pad-vh" type="range" min="0" max="8" step="0.1" class="sys-input"></label><label style="font-size:11px; color:var(--text-dim);">Pad VW <input id="dsk-panel-pad-vw" type="range" min="0" max="8" step="0.1" class="sys-input"></label></div>
+                    <div class="sys-row" style="margin-top:10px; margin-bottom:0;"><label style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-dim);"><input type="checkbox" id="dsk-panel-transparent"> Transparent panel</label><label style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-dim);"><input type="checkbox" id="dsk-progress-enabled" checked> Show progress bar</label><span id="dsk-branding-status" style="font-size:11px; color:#86efac; display:none;">Applied ✓</span><button onclick="saveDskBranding()" class="sys-btn">SAVE DSK BRANDING</button></div>
                 </div>
             </div>
-            <div class="sys-group" style="margin-top:12px; margin-bottom:0;">
-                <h3>DSK branding</h3>
-                <p style="font-size:11px; color:var(--text-dim); margin:0 0 8px 0; text-align:center;">Panel + Digits (OK / Warn / Overflow) + Progress (OK / Warn / Overflow)</p>
-                <div class="sys-row" style="display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:8px;">
-                    <div style="text-align:center;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">Panel</div><input id="dsk-panel-color" type="color" class="sys-input" style="width:100%;"></div>
-                    <div style="text-align:center;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">OK</div><input id="dsk-text-ok" type="color" class="sys-input" style="width:100%;"></div>
-                    <div style="text-align:center;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">Warn</div><input id="dsk-text-warning" type="color" class="sys-input" style="width:100%;"></div>
-                    <div style="text-align:center;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">Over</div><input id="dsk-text-overflow" type="color" class="sys-input" style="width:100%;"></div>
-                </div>
-                <div class="sys-row" style="display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:8px;">
-                    <div style="text-align:center;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">Progress OK</div><input id="dsk-progress-ok" type="color" class="sys-input" style="width:100%;"></div>
-                    <div style="text-align:center;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">Progress Warn</div><input id="dsk-progress-warning" type="color" class="sys-input" style="width:100%;"></div>
-                    <div style="text-align:center;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">Progress Over</div><input id="dsk-progress-overflow" type="color" class="sys-input" style="width:100%;"></div>
-                </div>
-                <div class="sys-row">
-                    <label style="flex:1; font-size:11px; color:var(--text-dim);">Radius <input id="dsk-panel-radius" type="range" min="0" max="80" step="1" class="sys-input"></label>
-                    <label style="flex:1; font-size:11px; color:var(--text-dim);">Pad VH <input id="dsk-panel-pad-vh" type="range" min="0" max="8" step="0.1" class="sys-input"></label>
-                    <label style="flex:1; font-size:11px; color:var(--text-dim);">Pad VW <input id="dsk-panel-pad-vw" type="range" min="0" max="8" step="0.1" class="sys-input"></label>
-                </div>
-                <div class="sys-row" style="margin-bottom:0;">
-                    <label style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-dim);"><input type="checkbox" id="dsk-panel-transparent"> Transparent panel</label>
-                    <label style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-dim);"><input type="checkbox" id="dsk-progress-enabled" checked> Show progress bar</label>
-                    <span id="dsk-branding-status" style="font-size:11px; color:#86efac; display:none;">Applied ✓</span>
-                    <button onclick="saveDskBranding()" class="sys-btn">SAVE DSK BRANDING</button>
-                </div>
+            <div class="presenter-out-bottom">
+                <div class="sys-row" style="margin:0;"><button onclick="closePresenterOutModal()" class="sys-btn" style="background:#334155;">CANCEL</button></div>
+                <div class="sys-row" style="margin:0;"><button onclick="loadDisplayConfig()" class="sys-btn" style="background:#334155;">RESET</button><button onclick="saveDisplayProfile(); savePresenterPlacement(); saveDskBranding();" class="sys-btn">SAVE CHANGES</button></div>
             </div>
         </div>
     </div>
@@ -584,6 +568,16 @@
                 background: { ok: '#000000', warning: '#f97316', overflow: '#ef4444' },
                 indicator: { ok: '#22c55e', warning: '#f97316', overflow: '#ef4444' },
             };
+            const dskBrandingDefaults = {
+                panelColor: '#111111',
+                panelRadius: 28,
+                panelPaddingVh: 1.6,
+                panelPaddingVw: 2.2,
+                panelTransparent: false,
+                progressEnabled: true,
+                text: { ok: '#ffffff', warning: '#f97316', overflow: '#ef4444' },
+                progress: { ok: '#ffffff', warning: '#f97316', overflow: '#ef4444' },
+            };
             let presenterColors = { ...presenterColorDefaults.text };
             let presenterPosition = 4;
             let presenterScale = 1;
@@ -614,6 +608,10 @@
             const marginEl = document.getElementById('presenter-margin');
             if (scaleEl) scaleEl.value = String(presenterScale);
             if (marginEl) marginEl.value = String(presenterMargin);
+            const scaleChip = document.getElementById('scale-chip');
+            if (scaleChip) scaleChip.innerText = `${Math.round(Number(presenterScale) * 100)}%`;
+            const marginChip = document.getElementById('margin-chip');
+            if (marginChip) marginChip.innerText = `${presenterMargin} px`;
         }
 
         function setPresenterAnchor(anchor) {
@@ -1071,6 +1069,7 @@
                 const res = await apiPost('/api/display-config', { hdmiView: next });
                 const data = await res.json();
                 if (hdmiEl) hdmiEl.value = String((data.displayConfig || {}).hdmiView || 'presenter');
+                closePresenterOutModal();
                 document.getElementById('hdmi-apply-modal').classList.add('active');
             } catch (error) {
                 alert(`Save failed: ${error.message}`);
@@ -1114,6 +1113,30 @@
             } catch (error) {
                 alert(`Save failed: ${error.message}`);
             }
+        }
+
+        function applyDskBrandingDefaultsToInputs() {
+            const set = (id, val) => { const el = document.getElementById(id); if (el != null && val != null) el.value = String(val); };
+            set('dsk-panel-color', dskBrandingDefaults.panelColor);
+            set('dsk-text-ok', dskBrandingDefaults.text.ok);
+            set('dsk-text-warning', dskBrandingDefaults.text.warning);
+            set('dsk-text-overflow', dskBrandingDefaults.text.overflow);
+            set('dsk-progress-ok', dskBrandingDefaults.progress.ok);
+            set('dsk-progress-warning', dskBrandingDefaults.progress.warning);
+            set('dsk-progress-overflow', dskBrandingDefaults.progress.overflow);
+            set('dsk-panel-radius', dskBrandingDefaults.panelRadius);
+            set('dsk-panel-pad-vh', dskBrandingDefaults.panelPaddingVh);
+            set('dsk-panel-pad-vw', dskBrandingDefaults.panelPaddingVw);
+            const transparent = document.getElementById('dsk-panel-transparent');
+            if (transparent) transparent.checked = dskBrandingDefaults.panelTransparent;
+            const progressEnabled = document.getElementById('dsk-progress-enabled');
+            if (progressEnabled) progressEnabled.checked = dskBrandingDefaults.progressEnabled;
+            refreshDskColorPreviews();
+        }
+
+        async function loadDskBrandingDefaults() {
+            applyDskBrandingDefaultsToInputs();
+            await saveDskBranding();
         }
 
         async function saveDskBranding() {
