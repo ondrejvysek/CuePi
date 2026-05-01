@@ -129,9 +129,14 @@
         .po-value{min-height:40px;display:grid;place-items:center;border:1px solid rgba(145,174,210,.22);border-radius:8px;background:rgba(4,14,27,.62);font-size:18px}
         .po-brand-grid{display:grid;grid-template-columns:repeat(4,minmax(90px,1fr));column-gap:20px;row-gap:20px;padding:12px 2px 16px}
         .po-swatch{min-height:46px;border-radius:8px;border:2px solid rgba(179,207,238,.35)}
-        .po-footer{display:flex;justify-content:space-between;gap:20px;margin-top:18px;padding-top:16px;border-top:1px solid rgba(145,174,210,.18)}
+        .po-footer{display:flex;justify-content:space-between;gap:20px;margin-top:18px;padding-top:16px;border-top:1px solid rgba(145,174,210,.18);background:linear-gradient(90deg, rgba(6,17,33,.8), rgba(3,10,21,.8));padding:14px;border-radius:12px}
 
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        
+        .label{color:#b9c6d8;font-size:15px;line-height:1.2;vertical-align:middle;display:inline-block;}
+        .button{min-height:44px;border:1px solid rgba(172,200,236,0.2);border-radius:10px;padding:0 18px;color:#fff;font-weight:800;letter-spacing:.025em;text-transform:uppercase;cursor:pointer;}
+        .button.secondary{background:linear-gradient(180deg,#1a2b41,#152337);color:#eef5ff;}
+        .button.primary{background:linear-gradient(180deg,#1d7cff,#075cf5);border-color:rgba(81,156,255,.7);box-shadow:0 8px 26px rgba(15,115,255,.34), inset 0 1px 0 rgba(255,255,255,.16);}
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
@@ -338,17 +343,17 @@
                       <div class="po-placement" style="margin-top:12px;"><div class="sys-row" style="display:grid;grid-template-columns:repeat(3,64px);gap:8px;">
                         <button data-anchor="0" class="po-anchor" onclick="setPresenterAnchor(0)">↖</button><button data-anchor="1" class="po-anchor" onclick="setPresenterAnchor(1)">↑</button><button data-anchor="2" class="po-anchor" onclick="setPresenterAnchor(2)">↗</button><button data-anchor="3" class="po-anchor" onclick="setPresenterAnchor(3)">←</button><button data-anchor="4" class="po-anchor" onclick="setPresenterAnchor(4)">•</button><button data-anchor="5" class="po-anchor" onclick="setPresenterAnchor(5)">→</button><button data-anchor="6" class="po-anchor" onclick="setPresenterAnchor(6)">↙</button><button data-anchor="7" class="po-anchor" onclick="setPresenterAnchor(7)">↓</button><button data-anchor="8" class="po-anchor" onclick="setPresenterAnchor(8)">↘</button>
                       </div><div><div class="slider-row"><div class="slider-main"><label class="label">Scale</label><input id="presenter-scale" type="range" min="0.5" max="3" step="0.05" class="sys-input"></div><div class="po-value" id="scale-chip">100%</div></div><div class="slider-row"><div class="slider-main"><label class="label">Margin</label><input id="presenter-margin" type="range" min="0" max="200" step="1" class="sys-input"></div><div class="po-value" id="margin-chip">24 px</div></div></div></div>
-                      <div class="placement-summary">Position: <strong id="presenter-placement-readout">Center</strong> <span id="presenter-placement-status" style="display:none;color:#86efac;">Applied ✓</span> <button onclick="savePresenterPlacement()" class="sys-btn" style="float:right;">SAVE</button></div>
+                      <div class="placement-summary">Position: <strong id="presenter-placement-readout">Center</strong></div>
                     </div>
                 </div>
                 <div class="po-card"><div class="card-header"><h3>DSK BRANDING</h3><button onclick="loadDskBrandingDefaults()" class="sys-btn" style="background:#17273b;">⟲ LOAD DEFAULT COLORS</button></div>
                   <div class="po-brand-grid"><div><div class="label">Panel</div><input id="dsk-panel-color" type="color" class="sys-input po-swatch"></div><div><div class="label">OK</div><input id="dsk-text-ok" type="color" class="sys-input po-swatch"></div><div><div class="label">Warn</div><input id="dsk-text-warning" type="color" class="sys-input po-swatch"></div><div><div class="label">Over</div><input id="dsk-text-overflow" type="color" class="sys-input po-swatch"></div><div><div class="label">Progress OK</div><input id="dsk-progress-ok" type="color" class="sys-input po-swatch"></div><div><div class="label">Progress Warn</div><input id="dsk-progress-warning" type="color" class="sys-input po-swatch"></div><div><div class="label">Progress Over</div><input id="dsk-progress-overflow" type="color" class="sys-input po-swatch"></div></div>
                   <div class="brand-divider"></div><div class="advanced-header"><span>Advanced</span><span>⌃</span></div>
-                  <div class="advanced-controls"><label class="mini-control">Radius<div class="mini-slider-row"><input id="dsk-panel-radius" type="range" min="0" max="80" step="1" class="sys-input"><div class="value-box">8 px</div></div></label><label class="mini-control">Pad VH<div class="mini-slider-row"><input id="dsk-panel-pad-vh" type="range" min="0" max="8" step="0.1" class="sys-input"><div class="value-box">12 px</div></div></label><label class="mini-control">Pad VW<div class="mini-slider-row"><input id="dsk-panel-pad-vw" type="range" min="0" max="8" step="0.1" class="sys-input"><div class="value-box">12 px</div></div></label></div>
-                  <div class="checkbox-row"><label class="check-item"><input type="checkbox" id="dsk-panel-transparent"> Transparent panel</label><label class="check-item"><input type="checkbox" id="dsk-progress-enabled" checked> Show progress bar</label><span id="dsk-branding-status" style="display:none;color:#86efac;">Applied ✓</span><button onclick="saveDskBranding()" class="sys-btn">SAVE DSK BRANDING</button></div>
+                  <div class="advanced-controls"><label class="mini-control">Radius<div class="mini-slider-row"><input id="dsk-panel-radius" type="range" min="0" max="80" step="1" class="sys-input"><input id="dsk-panel-radius-input" type="number" min="0" max="80" step="1" class="sys-input" style="width:72px; text-align:center;"></div></label><label class="mini-control">Pad VH<div class="mini-slider-row"><input id="dsk-panel-pad-vh" type="range" min="0" max="8" step="0.1" class="sys-input"><input id="dsk-panel-pad-vh-input" type="number" min="0" max="8" step="0.1" class="sys-input" style="width:72px; text-align:center;"></div></label><label class="mini-control">Pad VW<div class="mini-slider-row"><input id="dsk-panel-pad-vw" type="range" min="0" max="8" step="0.1" class="sys-input"><input id="dsk-panel-pad-vw-input" type="number" min="0" max="8" step="0.1" class="sys-input" style="width:72px; text-align:center;"></div></label></div>
+                  <div class="checkbox-row"><label class="check-item"><input type="checkbox" id="dsk-panel-transparent"> Transparent panel</label><label class="check-item"><input type="checkbox" id="dsk-progress-enabled" checked> Show progress bar</label></div>
                 </div>
             </div>
-            <div class="po-footer"><div class="footer-left"><button onclick="closePresenterOutModal()" class="button secondary">CANCEL</button><button onclick="loadDisplayConfig()" class="button secondary">RESET</button></div><button onclick="saveDisplayProfile(); savePresenterPlacement(); saveDskBranding();" class="button primary">SAVE CHANGES</button></div>
+            <div class="po-footer"><div class="footer-left"><button onclick="closePresenterOutModal()" class="button secondary" style="min-width:110px;">CANCEL</button><button onclick="loadDisplayConfig()" class="button secondary" style="min-width:110px;">RESET</button></div><button onclick="saveDisplayProfile(); savePresenterPlacement(); saveDskBranding();" class="button primary" style="min-width:205px;">SAVE CHANGES</button></div>
         </div>
     </div>
 
@@ -1015,6 +1020,9 @@
                 set('dsk-panel-radius', d.panelRadius ?? 28);
                 set('dsk-panel-pad-vh', d.panelPaddingVh ?? 1.6);
                 set('dsk-panel-pad-vw', d.panelPaddingVw ?? 2.2);
+                set('dsk-panel-radius-input', d.panelRadius ?? 28);
+                set('dsk-panel-pad-vh-input', d.panelPaddingVh ?? 1.6);
+                set('dsk-panel-pad-vw-input', d.panelPaddingVw ?? 2.2);
                 const transparent = document.getElementById('dsk-panel-transparent');
                 if (transparent) transparent.checked = d.panelTransparent === true;
                 const progressEnabled = document.getElementById('dsk-progress-enabled');
@@ -1091,12 +1099,6 @@
                 presenterScale = Number((data.displayConfig || {}).scale ?? presenterScale);
                 presenterMargin = Number((data.displayConfig || {}).margin ?? presenterMargin);
                 updatePresenterPlacementReadout();
-                const statusEl = document.getElementById('presenter-placement-status');
-                if (statusEl) {
-                    statusEl.style.display = 'inline';
-                    statusEl.innerText = 'Applied ✓';
-                    setTimeout(() => { statusEl.style.display = 'none'; }, 1400);
-                }
             } catch (error) {
                 alert(`Save failed: ${error.message}`);
             }
@@ -1114,6 +1116,9 @@
             set('dsk-panel-radius', dskBrandingDefaults.panelRadius);
             set('dsk-panel-pad-vh', dskBrandingDefaults.panelPaddingVh);
             set('dsk-panel-pad-vw', dskBrandingDefaults.panelPaddingVw);
+            set('dsk-panel-radius-input', dskBrandingDefaults.panelRadius);
+            set('dsk-panel-pad-vh-input', dskBrandingDefaults.panelPaddingVh);
+            set('dsk-panel-pad-vw-input', dskBrandingDefaults.panelPaddingVw);
             const transparent = document.getElementById('dsk-panel-transparent');
             if (transparent) transparent.checked = dskBrandingDefaults.panelTransparent;
             const progressEnabled = document.getElementById('dsk-progress-enabled');
@@ -1130,9 +1135,9 @@
             const payload = {
                 dskBranding: {
                     panelColor: document.getElementById('dsk-panel-color')?.value || '#111111',
-                    panelRadius: Number(document.getElementById('dsk-panel-radius')?.value || 28),
-                    panelPaddingVh: Number(document.getElementById('dsk-panel-pad-vh')?.value || 1.6),
-                    panelPaddingVw: Number(document.getElementById('dsk-panel-pad-vw')?.value || 2.2),
+                    panelRadius: Number(document.getElementById('dsk-panel-radius-input')?.value || document.getElementById('dsk-panel-radius')?.value || 28),
+                    panelPaddingVh: Number(document.getElementById('dsk-panel-pad-vh-input')?.value || document.getElementById('dsk-panel-pad-vh')?.value || 1.6),
+                    panelPaddingVw: Number(document.getElementById('dsk-panel-pad-vw-input')?.value || document.getElementById('dsk-panel-pad-vw')?.value || 2.2),
                     panelSemanticBackground: true,
                     panelTransparent: !!document.getElementById('dsk-panel-transparent')?.checked,
                     progressEnabled: !!document.getElementById('dsk-progress-enabled')?.checked,
@@ -1150,12 +1155,6 @@
             };
             try {
                 await apiPost('/api/display-config', payload);
-                const statusEl = document.getElementById('dsk-branding-status');
-                if (statusEl) {
-                    statusEl.style.display = 'inline';
-                    statusEl.innerText = 'Applied ✓';
-                    setTimeout(() => { statusEl.style.display = 'none'; }, 1400);
-                }
             } catch (error) {
                 alert(`Save failed: ${error.message}`);
             }
@@ -1818,6 +1817,14 @@
             ['dsk-panel-color','dsk-text-ok','dsk-text-warning','dsk-text-overflow','dsk-progress-ok','dsk-progress-warning','dsk-progress-overflow'].forEach((id) => {
                 const el = document.getElementById(id);
                 if (el) el.addEventListener('input', refreshDskColorPreviews);
+            });
+            [['dsk-panel-radius','dsk-panel-radius-input'],['dsk-panel-pad-vh','dsk-panel-pad-vh-input'],['dsk-panel-pad-vw','dsk-panel-pad-vw-input']].forEach(([rangeId,inputId]) => {
+                const rangeEl = document.getElementById(rangeId);
+                const inputEl = document.getElementById(inputId);
+                if (rangeEl && inputEl) {
+                    rangeEl.addEventListener('input', () => { inputEl.value = rangeEl.value; });
+                    inputEl.addEventListener('input', () => { rangeEl.value = inputEl.value; });
+                }
             });
             updatePresenterPlacementReadout();
             refreshDskColorPreviews();
