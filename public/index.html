@@ -1129,6 +1129,69 @@
             }
         }
 
+        async function savePresenterPlacement() {
+            const scaleEl = document.getElementById('presenter-scale');
+            const marginEl = document.getElementById('presenter-margin');
+            presenterScale = Math.min(3, Math.max(0.5, Number(scaleEl?.value || presenterScale || 1)));
+            presenterMargin = Math.min(200, Math.max(0, Math.round(Number(marginEl?.value || presenterMargin || 24))));
+            updatePresenterPlacementReadout();
+            try {
+                const res = await apiPost('/api/display-config', {
+                    position: presenterPosition,
+                    scale: presenterScale,
+                    margin: presenterMargin,
+                });
+                const data = await res.json();
+                presenterPosition = Number((data.displayConfig || {}).position ?? presenterPosition);
+                presenterScale = Number((data.displayConfig || {}).scale ?? presenterScale);
+                presenterMargin = Number((data.displayConfig || {}).margin ?? presenterMargin);
+                updatePresenterPlacementReadout();
+                const statusEl = document.getElementById('presenter-placement-status');
+                if (statusEl) {
+                    statusEl.style.display = 'inline';
+                    statusEl.innerText = 'Applied ✓';
+                    setTimeout(() => { statusEl.style.display = 'none'; }, 1400);
+                }
+            } catch (error) {
+                alert(`Save failed: ${error.message}`);
+            }
+        }
+
+        async function saveDskBranding() {
+            const payload = {
+                dskBranding: {
+                    panelColor: document.getElementById('dsk-panel-color')?.value || '#111111',
+                    panelRadius: Number(document.getElementById('dsk-panel-radius')?.value || 28),
+                    panelPaddingVh: Number(document.getElementById('dsk-panel-pad-vh')?.value || 1.6),
+                    panelPaddingVw: Number(document.getElementById('dsk-panel-pad-vw')?.value || 2.2),
+                    panelSemanticBackground: true,
+                    panelTransparent: !!document.getElementById('dsk-panel-transparent')?.checked,
+                    progressEnabled: !!document.getElementById('dsk-progress-enabled')?.checked,
+                    text: {
+                        ok: document.getElementById('dsk-text-ok')?.value || '#ffffff',
+                        warning: document.getElementById('dsk-text-warning')?.value || '#f97316',
+                        overflow: document.getElementById('dsk-text-overflow')?.value || '#ef4444',
+                    },
+                    progress: {
+                        ok: document.getElementById('dsk-progress-ok')?.value || '#ffffff',
+                        warning: document.getElementById('dsk-progress-warning')?.value || '#f97316',
+                        overflow: document.getElementById('dsk-progress-overflow')?.value || '#ef4444',
+                    },
+                },
+            };
+            try {
+                await apiPost('/api/display-config', payload);
+                const statusEl = document.getElementById('dsk-branding-status');
+                if (statusEl) {
+                    statusEl.style.display = 'inline';
+                    statusEl.innerText = 'Applied ✓';
+                    setTimeout(() => { statusEl.style.display = 'none'; }, 1400);
+                }
+            } catch (error) {
+                alert(`Save failed: ${error.message}`);
+            }
+        }
+
         async function savePresenterColors() {
             const okEl = document.getElementById('presenter-color-ok');
             const warnEl = document.getElementById('presenter-color-warning');
