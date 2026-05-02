@@ -127,13 +127,16 @@
         .card-header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}
         .section-title{display:flex;align-items:center;gap:12px;color:#e8eef8;font-size:18px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
         .icon{width:25px;height:25px;display:inline-grid;place-items:center;color:#f1f6ff;opacity:.96}
+        .icon svg{width:100%;height:100%;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
         .field-group{display:grid;gap:9px;margin-bottom:14px}
         .label{color:#b9c6d8;font-size:15px;line-height:1.2;vertical-align:middle}
         .po-modal .sys-input{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:rgba(5,15,29,.76);border:1px solid rgba(161,189,224,.24);color:#f4f7fb;border-radius:9px;padding:0 12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
         .po-modal select.sys-input{min-height:48px;padding:0 46px 0 16px;appearance:none}
         .po-modal input[type="range"].sys-input{min-height:8px;padding:0;background:transparent;border:0;box-shadow:none;accent-color:#1a8cff}
         .po-modal input[type="number"].sys-input{height:40px}
-        .po-modal input[type="checkbox"]{width:18px;height:18px;accent-color:#1a8cff}
+        .po-modal .check-item input{width:22px;height:22px;appearance:none;border:1px solid rgba(174,202,234,.46);border-radius:4px;background:rgba(7,17,31,.66);display:grid;place-items:center;margin:0}
+        .po-modal .check-item input:checked{background:#0f73ff;border-color:#1a8cff;box-shadow:0 6px 18px rgba(15,115,255,.34)}
+        .po-modal .check-item input:checked::after{content:"✓";color:#fff;font-weight:900;font-size:16px;line-height:1}
         .select-wrap{position:relative}
         .select-wrap::after{content:"⌄";position:absolute;right:16px;top:50%;transform:translateY(-54%);color:#e8f1ff;font-size:26px;pointer-events:none;line-height:1}
         .button-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0 18px}
@@ -152,7 +155,7 @@
         .placement-summary{margin-top:14px;padding-top:14px;border-top:1px solid rgba(145,174,210,.2);color:#b9c6d8;font-size:15px}.placement-summary strong{color:#1a8cff;font-weight:750}
         .brand-card{min-height:100%;display:grid;grid-template-rows:auto 1fr}
         .ghost-button{min-height:36px;display:inline-flex;align-items:center;justify-content:center;gap:9px;border:1px solid rgba(180,206,238,.26);border-radius:8px;background:rgba(7,17,31,.52);color:#e9f2ff;padding:0 15px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;white-space:nowrap}
-        .brand-grid{display:grid;grid-template-columns:repeat(4,minmax(90px,1fr));column-gap:28px;row-gap:24px;align-items:end;padding:18px 2px 22px}
+        .brand-grid{display:grid;grid-template-columns:repeat(4,minmax(90px,1fr));column-gap:28px;row-gap:34px;align-items:end;padding:18px 2px 22px}
         .color-field{display:grid;gap:10px;min-width:0}.color-field .label{text-align:center;color:#c8d4e4}
         .swatch{min-height:46px;border-radius:8px;border:2px solid rgba(179,207,238,.35)}
         .brand-divider{height:1px;background:rgba(145,174,210,.2);margin:2px 0 24px}
@@ -365,19 +368,19 @@
             </header>
             <section class="layout">
               <div class="left-stack">
-                <section class="card"><div class="card-header"><div class="section-title"><span class="icon">▣</span>Output</div></div>
+                <section class="card"><div class="card-header"><div class="section-title"><span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"></rect><path d="M8 20h8M12 17v3"></path></svg></span>Output</div></div>
                     <div class="field-group"><label class="label">Display Profile</label><div class="select-wrap"><select id="display-profile-selector" class="sys-input"><option value="program">Program (safe)</option><option value="chroma_dsk">Chroma DSK (green key background)</option><option value="luma_dsk">Luma DSK (black/white luminance style)</option></select></div></div>
                     <div class="button-row"><button onclick="openPresenterOutputWindow('/presenter.html')" class="button secondary">Open Classic Presenter</button><button onclick="openPresenterOutputWindow('/presenter-dsk.html')" class="button primary">Open DSK Presenter</button></div>
                     <div class="field-group"><label class="label">HDMI Output</label><div class="hdmi-row"><div class="select-wrap"><select id="hdmi-view-selector" class="sys-input"><option value="presenter">HDMI: Classic Presenter</option><option value="presenter_dsk">HDMI: DSK Presenter</option></select></div><button onclick="saveHdmiView()" class="button apply">⟳ Apply HDMI View</button></div><p class="hint">Applying HDMI view will restart the output.</p></div>
                 </section>
-                <section class="card"><div class="card-header"><div class="section-title"><span class="icon">▦</span>Presenter Placement</div></div>
+                <section class="card"><div class="card-header"><div class="section-title"><span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path><path d="M8 4v16M16 4v16"></path></svg></span>Presenter Placement</div></div>
                   <div class="placement-content"><div class="anchor-grid">
                     <button data-anchor="0" class="anchor-button" onclick="setPresenterAnchor(0)">↖</button><button data-anchor="1" class="anchor-button" onclick="setPresenterAnchor(1)">↑</button><button data-anchor="2" class="anchor-button" onclick="setPresenterAnchor(2)">↗</button><button data-anchor="3" class="anchor-button" onclick="setPresenterAnchor(3)">←</button><button data-anchor="4" class="anchor-button" onclick="setPresenterAnchor(4)">•</button><button data-anchor="5" class="anchor-button" onclick="setPresenterAnchor(5)">→</button><button data-anchor="6" class="anchor-button" onclick="setPresenterAnchor(6)">↙</button><button data-anchor="7" class="anchor-button" onclick="setPresenterAnchor(7)">↓</button><button data-anchor="8" class="anchor-button" onclick="setPresenterAnchor(8)">↘</button>
                   </div><div class="slider-stack"><div class="slider-row"><div class="slider-main"><label class="label">Scale</label><input id="presenter-scale" type="range" min="0.5" max="3" step="0.05" class="sys-input"></div><div class="value-box" id="scale-chip">100%</div></div><div class="slider-row"><div class="slider-main"><label class="label">Margin</label><input id="presenter-margin" type="range" min="0" max="200" step="1" class="sys-input"></div><div class="value-box" id="margin-chip">24 px</div></div></div></div>
                   <div class="placement-summary">Position: <strong id="presenter-placement-readout">Center</strong></div>
                 </section>
               </div>
-              <section class="card brand-card"><div><div class="card-header"><div class="section-title"><span class="icon">✎</span>DSK Branding</div><button onclick="loadDskBrandingDefaults()" class="ghost-button">⟲ Load Default Colors</button></div>
+              <section class="card brand-card"><div><div class="card-header"><div class="section-title"><span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l11-11a2.1 2.1 0 0 0-3-3L5 17v3z"></path><path d="M14 6l4 4"></path></svg></span>DSK Branding</div><button onclick="loadDskBrandingDefaults()" class="ghost-button">⟲ Load Default Colors</button></div>
               <div class="brand-grid"><div class="color-field"><span class="label">Panel</span><input id="dsk-panel-color" type="color" class="sys-input swatch"></div><div class="color-field"><span class="label">OK</span><input id="dsk-text-ok" type="color" class="sys-input swatch"></div><div class="color-field"><span class="label">Warn</span><input id="dsk-text-warning" type="color" class="sys-input swatch"></div><div class="color-field"><span class="label">Over</span><input id="dsk-text-overflow" type="color" class="sys-input swatch"></div><div class="color-field"><span class="label">Progress OK</span><input id="dsk-progress-ok" type="color" class="sys-input swatch"></div><div class="color-field"><span class="label">Progress Warn</span><input id="dsk-progress-warning" type="color" class="sys-input swatch"></div><div class="color-field"><span class="label">Progress Over</span><input id="dsk-progress-overflow" type="color" class="sys-input swatch"></div></div>
               <div class="brand-divider"></div><div class="advanced-header"><span>Advanced</span><span>⌃</span></div>
               <div class="advanced-controls"><div class="mini-control"><label class="label">Radius</label><div class="mini-slider-row"><input id="dsk-panel-radius" type="range" min="0" max="80" step="1" class="sys-input"><input id="dsk-panel-radius-input" type="number" class="sys-input"></div></div><div class="mini-control"><label class="label">Pad VH</label><div class="mini-slider-row"><input id="dsk-panel-pad-vh" type="range" min="0" max="8" step="0.1" class="sys-input"><input id="dsk-panel-pad-vh-input" type="number" class="sys-input"></div></div><div class="mini-control"><label class="label">Pad VW</label><div class="mini-slider-row"><input id="dsk-panel-pad-vw" type="range" min="0" max="8" step="0.1" class="sys-input"><input id="dsk-panel-pad-vw-input" type="number" class="sys-input"></div></div></div>
