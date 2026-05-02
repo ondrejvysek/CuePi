@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CuePi Moderator Mockup</title>
+  <style>
+    :root {
+      --bg: #081326;
+      --bg2: #061020;
+      --card: #0b213b;
+      --card2: #0a1a31;
+      --card3: #122b49;
+      --field: #071326;
+      --line: rgba(130, 168, 224, .24);
+      --line2: rgba(150, 190, 245, .36);
+      --text: #f3f7ff;
+      --soft: #c8d5e8;
+      --muted: #8496b1;
+      --blue: #2f74ff;
+      --blue2: #3c87ff;
+      --green: #21b957;
+      --orange: #e68a0a;
+      --red: #e2313b;
+      --radius: 14px;
+      --control: 9px;
+      --shadow: 0 18px 50px rgba(0,0,0,.34);
+      --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { margin: 0; min-height: 100%; }
+
+    body {
+      font-family: var(--font);
+      color: var(--text);
+      background:
+        radial-gradient(circle at 18% 0%, rgba(38,96,168,.22), transparent 30%),
+        radial-gradient(circle at 85% 10%, rgba(35,76,142,.16), transparent 28%),
+        linear-gradient(180deg, var(--bg), var(--bg2));
+      padding: 18px 24px 28px;
+    }
+
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+
+    .app { max-width: 1440px; margin: 0 auto; }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 250px 170px 180px 160px 120px 130px 138px;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .brand { display: flex; align-items: baseline; gap: 9px; }
+    .brand strong { font-size: 26px; letter-spacing: -.04em; }
+    .brand span { color: var(--muted); font-size: 13px; font-weight: 650; }
+
+    .top-chip, .top-btn {
+      height: 38px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(20,37,61,.96), rgba(13,27,49,.96));
+      color: var(--text);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      padding: 0 14px;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+    }
+
+    .top-chip.ip { color: #94bdff; text-transform: none; letter-spacing: .04em; font-weight: 750; }
+    .top-chip.presenter { color: #9ff4b6; border-color: rgba(58,210,100,.48); background: linear-gradient(180deg, rgba(20,70,43,.88), rgba(12,42,29,.9)); }
+    .top-chip.audio { color: #ffbd65; border-color: rgba(230,138,10,.5); background: linear-gradient(180deg, rgba(70,48,20,.82), rgba(40,29,20,.9)); }
+    .top-btn.restart { color: #ff8a90; border-color: rgba(226,49,59,.58); background: linear-gradient(180deg, rgba(86,25,33,.94), rgba(48,18,24,.96)); }
+
+    .ico {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex: 0 0 auto;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(720px, 1.58fr) minmax(430px, 1fr);
+      gap: 24px;
+      align-items: start;
+    }
+
+    .stack { display: grid; gap: 16px; }
+
+    .card {
+      background: linear-gradient(180deg, rgba(14,35,62,.97), rgba(8,24,45,.97));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,.035);
+    }
+
+    .title {
+      margin: 0 0 14px;
+      color: #d9e8fb;
+      font-size: 13px;
+      line-height: 1;
+      letter-spacing: .17em;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .card-head .title { margin: 0; }
+
+    .live-badge {
+      height: 30px;
+      padding: 0 13px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(27,115,62,.24);
+      border: 1px solid rgba(73,220,116,.32);
+      color: #9bf2b7;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .dot { width: 7px; height: 7px; border-radius: 99px; background: #2fe56f; box-shadow: 0 0 10px rgba(47,229,111,.9); }
+
+    .preview {
+      overflow: hidden;
+      border-radius: 12px;
+      border: 1px solid rgba(122,154,199,.2);
+      background: #000;
+    }
+
+    .screen {
+      height: 230px;
+      display: grid;
+      place-items: center;
+      background: #000;
+      color: #23d862;
+      font-size: clamp(68px, 8vw, 88px);
+      font-weight: 900;
+      line-height: 1;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      letter-spacing: -.08em;
+      text-shadow: 0 0 18px rgba(35,216,98,.2);
+    }
+
+    .status-strip {
+      min-height: 62px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.55fr;
+      background: linear-gradient(180deg, rgba(14,35,63,.98), rgba(9,25,46,.98));
+      border-top: 1px solid rgba(122,154,199,.16);
+    }
+
+    .status {
+      display: grid;
+      grid-template-columns: 34px 1fr;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 20px;
+      border-right: 1px solid rgba(122,154,199,.18);
+    }
+    .status:last-child { border-right: 0; }
+    .status-icon { color: #8fb8ff; display: grid; place-items: center; }
+    .status span { display: block; color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+    .status strong { display: block; color: #fff; font-size: 15px; line-height: 1; }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      margin-bottom: 12px;
+    }
+
+    .seg {
+      height: 43px;
+      border: 0;
+      border-right: 1px solid rgba(122,154,199,.18);
+      background: linear-gradient(180deg, rgba(18,38,68,.96), rgba(12,27,51,.96));
+      color: #dbe7fa;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      font-size: 14px;
+      font-weight: 850;
+    }
+    .seg:last-child { border-right: 0; }
+    .seg.active { background: linear-gradient(180deg, #3885ff, #2665e7); color: #fff; }
+
+    .date-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .soft-btn, .secondary-btn {
+      min-height: 42px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(18,39,70,.94), rgba(12,28,52,.94));
+      color: #e6f1ff;
+      font-size: 14px;
+      font-weight: 850;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+    }
+    .soft-btn.active { border-color: rgba(69,133,255,.55); background: linear-gradient(180deg, rgba(41,103,224,.78), rgba(19,58,126,.9)); }
+
+    .timer-card { padding-top: 14px; padding-bottom: 14px; }
+    .timer-grid { display: grid; grid-template-columns: repeat(6, 1fr) 1.1fr 96px; gap: 8px; align-items: end; }
+
+    .preset {
+      height: 37px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(21,40,67,.96), rgba(13,28,52,.96));
+      color: #e8f1ff;
+      font-size: 14px;
+      font-weight: 850;
+    }
+    .preset.active { background: linear-gradient(180deg, #367fff, #2565e7); border-color: rgba(112,166,255,.55); }
+
+    .field { display: grid; gap: 6px; }
+    label { color: var(--muted); font-size: 11px; font-weight: 750; line-height: 1; }
+
+    .input, .select {
+      width: 100%;
+      height: 37px;
+      border-radius: 8px;
+      border: 1px solid rgba(122,154,199,.24);
+      background: rgba(7,17,32,.94);
+      color: #eef5ff;
+      padding: 0 12px;
+      font-size: 13px;
+      outline: none;
+    }
+    .input::placeholder { color: #72839c; }
+
+    .primary-btn {
+      min-height: 40px;
+      border-radius: 8px;
+      border: 1px solid rgba(108,163,255,.52);
+      background: linear-gradient(180deg, #3c84ff, #2869ec);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 900;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 8px 22px rgba(47,114,246,.24), inset 0 1px 0 rgba(255,255,255,.12);
+    }
+
+    .rundown-form { display: grid; grid-template-columns: 1.5fr 230px 170px 92px; gap: 13px; align-items: end; margin-bottom: 11px; }
+    .duration { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .note-trigger { display: grid; grid-template-columns: 1.48fr 1fr; gap: 13px; align-items: end; margin-bottom: 13px; }
+    .trigger-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    .trigger {
+      height: 38px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: rgba(17,34,60,.96);
+      color: #e5efff;
+      font-size: 14px;
+      font-weight: 850;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .trigger.active { border-color: rgba(81,215,122,.5); background: linear-gradient(180deg, rgba(35,156,77,.92), rgba(26,104,59,.94)); }
+
+    .tools { display: flex; gap: 11px; align-items: center; margin: 10px 0 13px; }
+    .tool { width: 38px; height: 38px; border-radius: 50%; border: 0; color: #fff; display: grid; place-items: center; box-shadow: inset 0 1px 0 rgba(255,255,255,.14); }
+    .tool svg { width: 18px; height: 18px; }
+    .green { background: var(--green); }
+    .orange { background: var(--orange); }
+    .blue { background: var(--blue); }
+    .green2 { background: #1fab57; }
+    .teal { background: #167c78; font-weight: 900; }
+    .gray { background: #39485e; color: #d4def0; }
+
+    .table { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: rgba(6,17,33,.45); }
+    .row { display: grid; grid-template-columns: 52px 1.15fr 1.16fr 1.62fr 84px; align-items: center; gap: 10px; min-height: 47px; padding: 0 12px; border-bottom: 1px solid rgba(122,154,199,.14); }
+    .row:last-child { border-bottom: 0; }
+    .row.head { min-height: 34px; color: #b7c7df; font-size: 11px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; background: rgba(5,14,28,.68); }
+    .drag-num { display: flex; align-items: center; gap: 9px; font-weight: 900; }
+    .drag { color: #87a5cf; font-size: 16px; }
+    .segment { font-size: 15px; font-weight: 900; }
+    .td { color: #dce7f8; font-size: 13px; }
+    .note { color: #c9d3e4; font-style: italic; }
+    .row-actions { display: flex; justify-content: flex-end; gap: 8px; }
+    .action { width: 31px; height: 31px; border-radius: 50%; border: 0; color: #fff; display: grid; place-items: center; }
+    .edit { background: #2f72f6; }
+    .delete { background: #f0333b; }
+
+    .transport-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .transport-main { height: 103px; border-radius: 11px; border: 1px solid var(--line); color: #fff; font-size: 21px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; }
+    .start { background: linear-gradient(180deg, #22b955, #1da44b); border-color: rgba(78,222,116,.28); }
+    .reset { background: linear-gradient(180deg, #4c5d73, #415065); }
+    .transport-main .circle { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.18); }
+    .delta { height: 47px; border-radius: 10px; border: 1px solid var(--line); background: linear-gradient(180deg, rgba(18,40,73,.96), rgba(11,28,54,.96)); color: #84b4ff; font-size: 15px; font-weight: 900; letter-spacing: .08em; }
+
+    .message-stack { display: grid; gap: 12px; }
+    .message-input { height: 44px; }
+    .message-actions { display: grid; gap: 10px; }
+
+    .save-btn { height: 33px; padding: 0 14px; border-radius: 8px; border: 1px solid rgba(82,139,246,.44); color: #99bbff; background: rgba(26,59,112,.33); font-size: 13px; font-weight: 900; display: flex; align-items: center; gap: 7px; }
+    .quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .quick { height: 95px; border: 1px solid rgba(122,154,199,.22); border-radius: 10px; background: linear-gradient(180deg, rgba(16,35,63,.96), rgba(10,26,49,.96)); display: grid; grid-template-columns: 36px 1fr; align-items: center; padding: 0 14px; color: #fff; }
+    .quick-index { color: #99add0; font-size: 15px; font-weight: 850; }
+    .quick-copy { display: grid; justify-items: center; gap: 6px; color: #fff; font-size: 14px; font-weight: 850; text-align: center; }
+    .quick-copy .ico { width: 25px; height: 25px; color: #dce9ff; }
+
+    .dropzone { min-height: 94px; border-radius: 10px; border: 1px dashed rgba(151,173,204,.38); background: rgba(5,13,25,.72); display: grid; place-items: center; text-align: center; margin-bottom: 13px; padding: 14px; }
+    .dropzone-inner { display: flex; align-items: center; gap: 18px; color: #dce7f8; }
+    .upload-big { width: 31px; height: 31px; color: #fff; }
+    .dropzone strong { display: block; font-size: 14px; line-height: 1.15; font-weight: 900; letter-spacing: .07em; text-transform: uppercase; }
+    .dropzone span { color: var(--muted); font-size: 12px; }
+    .branding-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+    @media (max-width: 1220px) {
+      .topbar { grid-template-columns: repeat(4, 1fr); }
+      .brand { grid-column: 1 / -1; }
+      .layout { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 780px) {
+      body { padding: 12px; }
+      .topbar, .layout, .status-strip, .segmented, .date-row, .timer-grid, .rundown-form, .note-trigger, .transport-grid, .quick-grid, .branding-actions, .row { grid-template-columns: 1fr; }
+      .screen { height: 190px; font-size: 60px; }
+      .segmented { border: 0; gap: 8px; }
+      .seg { border: 1px solid var(--line); border-radius: 9px; }
+      .status { border-right: 0; border-bottom: 1px solid rgba(122,154,199,.18); }
+      .status:last-child { border-bottom: 0; }
+      .row.head { display: none; }
+      .row { padding: 13px; gap: 6px; }
+      .row-actions { justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand"><strong>CuePi</strong><span>Moderator</span></div>
+
+      <div class="top-chip ip"><svg class="ico" viewBox="0 0 24 24"><path d="M6 17h12M8 13h8M10 9h4M12 5v4"></path></svg>192.168.199.60</div>
+      <div class="top-chip presenter"><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="11" rx="2"></rect><path d="M9 20h6M12 16v4"></path></svg>Presenter Out</div>
+      <div class="top-chip audio"><svg class="ico" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4V5z"></path><path d="m19 9-6 6M13 9l6 6"></path></svg>Audio Off</div>
+      <button class="top-btn"><svg class="ico" viewBox="0 0 24 24"><path d="M4 7h16M4 17h16M4 12h16"></path><path d="M8 7v0M16 12v0M12 17v0"></path></svg>Config</button>
+      <button class="top-btn"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2 3.4-.2-.1a1.7 1.7 0 0 0-1.9.3 1.7 1.7 0 0 0-.8 1.5V23H9.1v-.8a1.7 1.7 0 0 0-.8-1.5 1.7 1.7 0 0 0-1.9-.3l-.2.1-2-3.4.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.3-1.2L3 13V9l.3-.1a1.7 1.7 0 0 0 1.3-1.2 1.7 1.7 0 0 0-.3-1.9l-.1-.1 2-3.4.2.1a1.7 1.7 0 0 0 1.9-.3 1.7 1.7 0 0 0 .8-1.5V0h5.8v.8a1.7 1.7 0 0 0 .8 1.5 1.7 1.7 0 0 0 1.9.3l.2-.1 2 3.4-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.3 1.2l.3.1v4l-.3.1a1.7 1.7 0 0 0-1.3 1.2z"></path></svg>Settings</button>
+      <button class="top-btn restart"><svg class="ico" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"></path><path d="M21 4v7h-7"></path></svg>Restart</button>
+    </header>
+
+    <main class="layout">
+      <section class="stack">
+        <section class="card">
+          <div class="card-head"><h1 class="title">Live Output</h1><div class="live-badge"><span class="dot"></span>Live</div></div>
+          <div class="preview">
+            <div class="screen">10:00</div>
+            <div class="status-strip">
+              <div class="status"><div class="status-icon"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v6l4 2"></path></svg></div><div><span>Mode</span><strong>Countdown</strong></div></div>
+              <div class="status"><div class="status-icon"><svg class="ico" viewBox="0 0 24 24"><path d="M4 4l16 16"></path><path d="M9.5 8.5A4 4 0 0 1 16 12"></path><path d="M7 6a8 8 0 0 1 11 11"></path></svg></div><div><span>Output</span><strong>Off Air</strong></div></div>
+              <div class="status"><div class="status-icon"><svg class="ico" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3v-6a8 8 0 1 1 18-5z"></path><path d="M8 12h.01M12 12h.01M16 12h.01"></path></svg></div><div><span>Message Preview</span><strong>None</strong></div></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2 class="title">Display Mode</h2>
+          <div class="segmented">
+            <button class="seg active"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>Countdown</button>
+            <button class="seg"><svg class="ico" viewBox="0 0 24 24"><path d="M4 16l6-6 4 4 6-8"></path><path d="M14 6h6v6"></path></svg>Count Up</button>
+            <button class="seg"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 6v6h5"></path></svg>Time of Day</button>
+            <button class="seg"><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"></rect><path d="M8 15l3-3 2 2 3-4 4 5"></path></svg>Idle / Logo</button>
+          </div>
+          <div class="date-row">
+            <button class="soft-btn active"><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"></rect><path d="M8 3v4M16 3v4M4 10h16"></path></svg>Count to date/time</button>
+            <button class="soft-btn"><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"></rect><path d="M8 3v4M16 3v4M4 10h16"></path></svg>Select date/time</button>
+          </div>
+        </section>
+
+        <section class="card timer-card">
+          <h2 class="title">Timer Presets</h2>
+          <div class="timer-grid">
+            <button class="preset">1m</button><button class="preset">5m</button><button class="preset active">10m</button><button class="preset">15m</button><button class="preset">30m</button><button class="preset">60m</button>
+            <div class="field"><label>Custom minutes</label><input class="input" placeholder="Enter minutes" /></div>
+            <button class="primary-btn">Set Time</button>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2 class="title">Rundown</h2>
+          <div class="rundown-form">
+            <div class="field"><label>Segment name</label><input class="input" placeholder="e.g., Opening Remarks" /></div>
+            <div class="field"><label>Duration</label><div class="duration"><input class="input" value="05" /><input class="input" value="00" /></div></div>
+            <div class="field"><label>Type</label><select class="select"><option>Countdown</option><option>Count Up</option><option>Time of Day</option></select></div>
+            <button class="primary-btn">Add</button>
+          </div>
+
+          <div class="note-trigger">
+            <div class="field"><label>Presenter note (optional)</label><input class="input" placeholder="Add a note for the presenter..." /></div>
+            <div class="field"><label>Trigger at zero</label><div class="trigger-grid"><button class="trigger active">✓ Follow</button><button class="trigger">Overflow</button></div></div>
+          </div>
+
+          <div class="tools">
+            <button class="tool green"><svg class="ico" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg></button>
+            <button class="tool orange"><svg class="ico" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10"></rect></svg></button>
+            <button class="tool blue"><svg class="ico" viewBox="0 0 24 24"><path d="M19 20 9 12l10-8v16zM5 19V5"></path></svg></button>
+            <button class="tool green2"><svg class="ico" viewBox="0 0 24 24"><path d="M5 4l10 8-10 8V4zM19 5v14"></path></svg></button>
+            <button class="tool teal">T</button>
+            <button class="tool gray"><svg class="ico" viewBox="0 0 24 24"><path d="m12 5 7 7M12 5l-7 7M12 5v14"></path></svg></button>
+            <button class="tool gray"><svg class="ico" viewBox="0 0 24 24"><path d="m12 19 7-7M12 19l-7-7M12 19V5"></path></svg></button>
+            <button class="tool gray"><svg class="ico" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M9 11v6M15 11v6M6 7l1 14h10l1-14"></path></svg></button>
+          </div>
+
+          <div class="table">
+            <div class="row head"><div>#</div><div>Segment</div><div>Type &amp; Duration</div><div>Presenter Note</div><div></div></div>
+            <div class="row"><div class="drag-num"><span class="drag">⋮⋮</span>1</div><div class="segment">Opening</div><div class="td">countdown • 300s</div><div class="td note">Welcome and housekeeping</div><div class="row-actions"><button class="action edit">✎</button><button class="action delete">×</button></div></div>
+            <div class="row"><div class="drag-num"><span class="drag">⋮⋮</span>2</div><div class="segment">Speaker A</div><div class="td">countdown • 900s</div><div class="td note">Keep answers short in Q&amp;A</div><div class="row-actions"><button class="action edit">✎</button><button class="action delete">×</button></div></div>
+            <div class="row"><div class="drag-num"><span class="drag">⋮⋮</span>3</div><div class="segment">Break</div><div class="td">countdown • 600s</div><div class="td note">No optional note</div><div class="row-actions"><button class="action edit">✎</button><button class="action delete">×</button></div></div>
+            <div class="row"><div class="drag-num"><span class="drag">⋮⋮</span>4</div><div class="segment">Clock Check</div><div class="td">timeofday • 0s</div><div class="td note">No optional note</div><div class="row-actions"><button class="action edit">✎</button><button class="action delete">×</button></div></div>
+          </div>
+        </section>
+      </section>
+
+      <aside class="stack">
+        <section class="card">
+          <h2 class="title">Transport Controls</h2>
+          <div class="transport-grid">
+            <button class="transport-main start"><span class="circle"><svg class="ico" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg></span>Start</button>
+            <button class="transport-main reset"><span class="circle"><svg class="ico" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"></path><path d="M21 4v7h-7"></path></svg></span>Reset</button>
+            <button class="delta">+ 1 Min</button><button class="delta">− 1 Min</button>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><h2 class="title">Message Control</h2><button class="save-btn"><svg class="ico" viewBox="0 0 24 24"><path d="M19 21 12 17 5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path></svg>Save</button></div>
+          <div class="message-stack">
+            <input class="input message-input" placeholder="Enter custom message..." />
+            <div class="message-actions">
+              <button class="primary-btn"><svg class="ico" viewBox="0 0 24 24"><path d="M22 2 11 13"></path><path d="m22 2-7 20-4-9-9-4 20-7z"></path></svg>Show Message</button>
+              <button class="secondary-btn"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="m15 9-6 6M9 9l6 6"></path></svg>Clear Message</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><h2 class="title">Quick Messages</h2></div>
+          <div class="quick-grid">
+            <button class="quick"><span class="quick-index">1</span><span class="quick-copy"><svg class="ico" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3v-6a8 8 0 1 1 18-5z"></path><path d="M8 12h.01M12 12h.01M16 12h.01"></path></svg>Wrap Up Now</span></button>
+            <button class="quick"><span class="quick-index">2</span><span class="quick-copy"><svg class="ico" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3v-6a8 8 0 1 1 18-5z"></path><path d="M8 12h.01M12 12h.01M16 12h.01"></path></svg>Q&amp;A Starting</span></button>
+            <button class="quick"><span class="quick-index">3</span><span class="quick-copy"><svg class="ico" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3v-6a8 8 0 1 1 18-5z"></path><path d="M8 12h.01M12 12h.01M16 12h.01"></path></svg>5 Minutes Left</span></button>
+            <button class="quick"><span class="quick-index">4</span><span class="quick-copy"><svg class="ico" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3v-6a8 8 0 1 1 18-5z"></path><path d="M8 12h.01M12 12h.01M16 12h.01"></path></svg>Speak Up</span></button>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2 class="title">Branding</h2>
+          <div class="dropzone"><div class="dropzone-inner"><svg class="upload-big" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"></path><path d="m6 10 6-6 6 6"></path><path d="M5 20h14"></path></svg><div><strong>No logo uploaded</strong><span>Recommended size: 512 × 128px</span></div></div></div>
+          <div class="branding-actions">
+            <button class="primary-btn"><svg class="ico" viewBox="0 0 24 24"><path d="M12 16V4"></path><path d="m6 10 6-6 6 6"></path><path d="M5 20h14"></path></svg>Upload Logo</button>
+            <button class="secondary-btn"><svg class="ico" viewBox="0 0 24 24"><circle cx="13" cy="6" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="15" cy="18" r="3"></circle></svg>Manage Colors</button>
+          </div>
+        </section>
+      </aside>
+    </main>
+  </div>
+</body>
+</html>
