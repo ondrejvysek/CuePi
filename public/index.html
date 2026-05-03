@@ -2470,8 +2470,7 @@
 			let pendingRundownImportSegments = [];
 			let pendingRundownImportWarnings = [];
 			let autoContinueInFlight = false;
-			let rundownFlowMode =
-				localStorage.getItem("rundownFlowMode") || "overflow";
+			let rundownFlowMode = "overflow";
 			let v2OnlyMode = false;
 			let selectedTargetISO = null;
 			let selectedTargetRepeatSeconds = 0;
@@ -2592,7 +2591,7 @@
 				alert(`Saved rundown trigger threshold at ${hintThresholdSeconds}s`);
 			}
 
-			function setRundownFlowMode(mode) {
+			function applyRundownFlowModeUi(mode) {
 				rundownFlowMode = mode === "follow" ? "follow" : "overflow";
 				localStorage.setItem("rundownFlowMode", rundownFlowMode);
 				document
@@ -2601,6 +2600,27 @@
 				document
 					.getElementById("rundown-flow-overflow")
 					.classList.toggle("active", rundownFlowMode === "overflow");
+			}
+
+			async function setRundownFlowMode(mode) {
+				const nextMode = mode === "follow" ? "follow" : "overflow";
+				applyRundownFlowModeUi(nextMode);
+				try {
+					await apiPost("/api/rundown/flow-mode", { mode: nextMode }, false);
+				} catch (error) {
+					console.warn("Could not persist rundown flow mode:", error.message);
+				}
+			}
+
+			async function loadRundownFlowMode() {
+				try {
+					const res = await fetch("/api/rundown/flow-mode");
+					if (!res.ok) throw new Error(`HTTP ${res.status}`);
+					const data = await res.json();
+					applyRundownFlowModeUi(data.mode);
+				} catch (_error) {
+					applyRundownFlowModeUi(localStorage.getItem("rundownFlowMode") || "overflow");
+				}
 			}
 
 			function toggleAudio() {
@@ -3922,6 +3942,7 @@
 			}
 
 			socket.on("stateUpdate", async (s) => {
+				if (s.rundownFlowMode) applyRundownFlowModeUi(s.rundownFlowMode);
 				presenterColors = {
 					...presenterColorDefaults.text,
 					...(getPresenterTextColors(s.presenterColors) || {}),
@@ -4227,9 +4248,7 @@
 						hintPinToggle.checked ? "1" : "0",
 					),
 				);
-				setRundownFlowMode(
-					localStorage.getItem("rundownFlowMode") || "overflow",
-				);
+				loadRundownFlowMode();
 				document.getElementById("hint-threshold-seconds").value =
 					getHintThreshold();
 				const scaleEl = document.getElementById("presenter-scale");

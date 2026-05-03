@@ -3,5 +3,6 @@
   "bindHost": "0.0.0.0",
   "corsOrigin": "*",
   "roomName": "CuePi",
-  "uuid": null
+  "uuid": null,
+  "rundownFlowMode": "overflow"
 }

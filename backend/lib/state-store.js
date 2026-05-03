@@ -10,6 +10,7 @@ const DEFAULT_CONFIG = {
   roomName: 'CuePi',
   uuid: null,
   v2OnlyMode: false,
+  rundownFlowMode: 'overflow',
 };
 
 const DEFAULT_STATE = {
