@@ -2911,6 +2911,7 @@
 			
 			let selectedDskDisplayId = null;
 			let unsubscribeDskDisplays = null;
+			const browserDskWindows = new Map();
 			function getDskBridge() {
 				if (window.dskApi) return window.dskApi;
 				return null;
@@ -2935,7 +2936,7 @@
 					return;
 				}
 				displays.forEach((d, index) => {
-					const isLive = liveDisplayIds.has(d.id);
+					const isLive = liveDisplayIds.has(d.id) || browserDskWindows.has(String(d.id));
 					const isModerator = d.isModerator === true;
 					const tile = document.createElement("div");
 					tile.setAttribute("role", "button");
@@ -2958,7 +2959,34 @@
 					powerButton.onclick = async (event) => {
 						event.stopPropagation();
 						const bridge = getDskBridge();
-						if (!(bridge && typeof bridge.toggleDsk === "function")) return;
+						if (!(bridge && typeof bridge.toggleDsk === "function")) {
+							const key = String(d.id);
+							const existing = browserDskWindows.get(key);
+							if (existing && !existing.closed) {
+								existing.close();
+								browserDskWindows.delete(key);
+								renderDskDisplayTiles(displays, liveDisplayIds);
+								return;
+							}
+							const win = window.open(
+								"/presenter-dsk.html",
+								`dsk_${key}`,
+								"popup=yes,menubar=no,toolbar=no,location=no,status=no,scrollbars=no,resizable=yes,width=1280,height=720",
+							);
+							if (win) {
+								try {
+									if (Number.isFinite(d.x) && Number.isFinite(d.y)) {
+										win.moveTo(Math.round(d.x), Math.round(d.y));
+									}
+									if (Number.isFinite(d.width) && Number.isFinite(d.height)) {
+										win.resizeTo(Math.round(d.width), Math.round(d.height));
+									}
+								} catch (_) {}
+								browserDskWindows.set(key, win);
+								renderDskDisplayTiles(displays, liveDisplayIds);
+							}
+							return;
+						}
 						try {
 							const state = await bridge.toggleDsk(d.id);
 							const nextLiveIds = new Set(state?.liveDisplayIds || []);
@@ -2989,6 +3017,8 @@
 						const displays = (state?.displays || []).map((display, idx) => ({
 							id: display.id ?? `display-${idx}`,
 							label: display.label || `Display ${idx + 1}`,
+							x: display?.bounds?.x,
+							y: display?.bounds?.y,
 							width: display?.bounds?.width ?? display.width ?? 0,
 							height: display?.bounds?.height ?? display.height ?? 0,
 							isModerator:
@@ -3009,6 +3039,8 @@
 						const displays = (details.screens || []).map((screen, idx) => ({
 							id: screen.label || `display-${idx}`,
 							label: screen.label || `Display ${idx + 1}`,
+							x: screen.left,
+							y: screen.top,
 							width: screen.width,
 							height: screen.height,
 						}));
