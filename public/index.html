@@ -2927,6 +2927,17 @@
 				) {
 					return window.electron;
 				}
+				const invoke =
+					(typeof window.electronAPI?.invoke === "function" &&
+						window.electronAPI.invoke.bind(window.electronAPI)) ||
+					(typeof window.electron?.invoke === "function" &&
+						window.electron.invoke.bind(window.electron));
+				if (invoke) {
+					return {
+						listDisplays: () => invoke("displays:list"),
+						toggleDsk: (displayId) => invoke("dsk:toggle", displayId),
+					};
+				}
 				return null;
 			}
 			function setDskStatusText(message, isLive) {
@@ -2972,7 +2983,6 @@
 						event.stopPropagation();
 						const bridge = getDskBridge();
 						if (!(bridge && typeof bridge.toggleDsk === "function")) {
-							console.warn("Electron DSK bridge not available.");
 							return;
 						}
 						try {
