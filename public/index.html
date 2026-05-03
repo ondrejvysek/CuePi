@@ -756,6 +756,115 @@
 				color: #b9c6d8;
 				font-size: 14px;
 			}
+			.output-divider {
+				height: 1px;
+				background: rgba(145, 174, 210, 0.2);
+				margin: 22px 0 18px;
+			}
+			.sub-header {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 14px;
+				margin-bottom: 12px;
+			}
+			.sub-title {
+				color: #e8eef8;
+				font-size: 15px;
+				font-weight: 850;
+				letter-spacing: 0.1em;
+				text-transform: uppercase;
+			}
+			.status-actions {
+				display: inline-flex;
+				align-items: center;
+				gap: 8px;
+			}
+			.icon-button {
+				width: 34px;
+				height: 34px;
+				display: inline-grid;
+				place-items: center;
+				border: 1px solid rgba(145, 174, 210, 0.24);
+				border-radius: 999px;
+				background: rgba(4, 14, 27, 0.5);
+				color: #e9f2ff;
+				cursor: pointer;
+				font-size: 17px;
+				line-height: 1;
+			}
+			.live-status {
+				display: inline-flex;
+				align-items: center;
+				gap: 8px;
+				padding: 7px 10px;
+				border: 1px solid rgba(145, 174, 210, 0.24);
+				border-radius: 999px;
+				background: rgba(4, 14, 27, 0.5);
+				color: #b9c6d8;
+				font-size: 12px;
+				font-weight: 750;
+				text-transform: uppercase;
+			}
+			.status-dot {
+				width: 9px;
+				height: 9px;
+				border-radius: 999px;
+				background: #ff2736;
+			}
+			.screen-picker {
+				display: flex;
+				flex-wrap: wrap;
+				align-items: flex-start;
+				gap: 10px;
+				padding: 12px;
+				border: 1px solid rgba(145, 174, 210, 0.18);
+				border-radius: 12px;
+				background: rgba(5, 15, 29, 0.52);
+			}
+			.screen-tile {
+				width: 132px;
+				height: 74px;
+				border: 1px solid rgba(255, 255, 255, 0.16);
+				border-radius: 10px;
+				background: #c9c9ce;
+				color: #09101d;
+				display: grid;
+				grid-template-rows: 1fr 20px;
+				gap: 3px;
+				padding: 8px 9px 7px;
+				cursor: pointer;
+			}
+			.screen-tile.selected {
+				background: #44b326;
+				color: #fff;
+			}
+			.screen-title {
+				margin: 0;
+				font-size: 15px;
+				font-weight: 800;
+				text-align: center;
+				align-self: center;
+			}
+			.screen-footer {
+				display: grid;
+				grid-template-columns: 1fr auto;
+				align-items: center;
+			}
+			.screen-meta {
+				margin: 0;
+				font-size: 11px;
+			}
+			.power-indicator {
+				width: 20px;
+				height: 20px;
+				display: grid;
+				place-items: center;
+				border-radius: 999px;
+				background: rgba(5, 15, 29, 0.22);
+				font-size: 13px;
+				font-weight: 900;
+			}
 			.placement-content {
 				display: grid;
 				grid-template-columns: 250px 1fr;
@@ -1533,18 +1642,21 @@
 									</select>
 								</div>
 							</div>
-							<div class="button-row">
-								<button
-									onclick="openPresenterOutputWindow('/presenter.html')"
-									class="button secondary"
-								>
-									Open Classic Presenter</button
-								><button
-									onclick="openPresenterOutputWindow('/presenter-dsk.html')"
-									class="button primary"
-								>
-									Open DSK Presenter
-								</button>
+							<div class="field-group">
+								<label class="label">Electron View</label>
+								<div class="button-row">
+									<button
+										onclick="openPresenterOutputWindow('/presenter.html')"
+										class="button secondary"
+									>
+										Open Classic Presenter</button
+									><button
+										onclick="openPresenterOutputWindow('/presenter-dsk.html')"
+										class="button primary"
+									>
+										Open DSK Presenter
+									</button>
+								</div>
 							</div>
 							<div class="field-group">
 								<label class="label">HDMI Output</label>
@@ -1561,6 +1673,28 @@
 								</div>
 								<p class="hint">Applying HDMI view will restart the output.</p>
 							</div>
+							<div class="output-divider"></div>
+							<div class="sub-header">
+								<div class="sub-title">Computer DSK Output</div>
+								<div class="status-actions">
+									<button
+										class="icon-button"
+										type="button"
+										onclick="refreshDskDisplays()"
+										aria-label="Refresh screens"
+									>
+										⟳
+									</button>
+									<div class="live-status hidden" id="dskStatus">
+										<span class="status-dot"></span> DSK hidden
+									</div>
+								</div>
+							</div>
+							<div class="screen-picker" id="screenPicker"></div>
+							<p class="hint">
+								Display selection uses browser/electron screen enumeration when
+								available.
+							</p>
 						</section>
 						<section class="card">
 							<div class="card-header">
@@ -2749,7 +2883,59 @@
 					.getElementById("config-transfer-modal")
 					.classList.remove("active");
 			}
+			
+			let selectedDskDisplayId = null;
+			function setDskStatusText(message, isLive) {
+				const status = document.getElementById("dskStatus");
+				if (!status) return;
+				status.classList.toggle("hidden", !isLive);
+				status.innerHTML = `<span class="status-dot"></span> ${message}`;
+			}
+			function renderDskDisplayTiles(displays) {
+				const picker = document.getElementById("screenPicker");
+				if (!picker) return;
+				picker.innerHTML = "";
+				if (!displays.length) {
+					const empty = document.createElement("p");
+					empty.className = "hint";
+					empty.textContent = "No additional displays detected.";
+					picker.appendChild(empty);
+					setDskStatusText("DSK hidden", false);
+					return;
+				}
+				displays.forEach((d, index) => {
+					const tile = document.createElement("button");
+					tile.type = "button";
+					tile.className = "screen-tile" + (selectedDskDisplayId === d.id ? " selected live" : "");
+					tile.innerHTML = `<p class="screen-title">${d.label || `Display ${index + 1}`}</p><div class="screen-footer"><p class="screen-meta">${d.width}x${d.height}</p><span class="power-indicator">⏻</span></div>`;
+					tile.onclick = () => {
+						selectedDskDisplayId = d.id;
+						renderDskDisplayTiles(displays);
+						setDskStatusText("DSK live", true);
+					};
+					picker.appendChild(tile);
+				});
+				setDskStatusText(selectedDskDisplayId ? "DSK live" : "DSK hidden", !!selectedDskDisplayId);
+			}
+			async function refreshDskDisplays() {
+				try {
+					if (window.getScreenDetails) {
+						const details = await window.getScreenDetails();
+						const displays = (details.screens || []).map((screen, idx) => ({
+							id: screen.label || `display-${idx}`,
+							label: screen.label || `Display ${idx + 1}`,
+							width: screen.width,
+							height: screen.height,
+						}));
+						renderDskDisplayTiles(displays);
+						return;
+					}
+					renderDskDisplayTiles([]);
+				} catch (e) { renderDskDisplayTiles([]); }
+			}
+
 			function openPresenterOutModal() {
+				refreshDskDisplays();
 				document.getElementById("presenter-out-modal").classList.add("active");
 			}
 			function closePresenterOutModal() {
