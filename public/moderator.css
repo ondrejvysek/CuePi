@@ -143,3 +143,18 @@ input[type="range"]::-webkit-slider-thumb { appearance: none; width: 17px; heigh
   .footer-left { display: grid; grid-template-columns: 1fr 1fr; }
   .footer .button.primary { width: 100%; }
 }
+
+body.dsk-output {
+  margin: 0;
+  padding: 0;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #00ff00;
+  cursor: none;
+}
+body.dsk-output .modal {
+  display: none;
+}

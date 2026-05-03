@@ -1,3 +1,9 @@
+const urlParams = new URLSearchParams(window.location.search);
+const isDskOutputMode = urlParams.get('mode') === 'dsk';
+
+if (isDskOutputMode) {
+  document.body.classList.add('dsk-output');
+} else {
 const screenPicker = document.getElementById('screenPicker');
 const refreshScreensButton = document.getElementById('refreshScreens');
 const dskStatus = document.getElementById('dskStatus');
@@ -74,3 +80,5 @@ closeAppButton.addEventListener('click', () => window.dskApi.closeApp());
 window.dskApi.onDisplaysChanged(render);
 
 refreshDisplays();
+
+}

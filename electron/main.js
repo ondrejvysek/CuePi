@@ -101,7 +101,7 @@ function createDskWindow(targetDisplay) {
     }
   });
 
-  win.loadFile(path.join(__dirname, '../public/dsk.html'));
+  win.loadFile(path.join(__dirname, '../public/moderator.html'), { query: { mode: 'dsk' } });
   win.on('closed', () => {
     dskWindows.delete(displayKey(targetDisplay.id));
     notifyDisplaysChanged();
