@@ -11,6 +11,8 @@
 		"@companion-module/base": "^1.8.0"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^1.5.0"
+		"@companion-module/tools": "^1.5.0",
+		"webpack": "^5.106.2",
+		"webpack-cli": "^7.0.2"
 	}
 }
