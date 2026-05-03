@@ -777,6 +777,7 @@ app.post('/api/rundown/run-current', requireAdmin, (req, res) => {
   if (!current) return structuredError(res, 400, 'No rundown loaded');
   timer.state.currentIndex = queue.currentIndex;
   applySegmentToTimer(current, true);
+  syncRundownMessageForSegment(current);
   persistState();
   broadcast();
   res.json({ ok: true, currentSegment: current, currentIndex: queue.currentIndex });
