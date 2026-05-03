@@ -408,6 +408,10 @@ function applySegmentToTimer(segment, autoStart = false) {
   if (autoStart) timer.start();
 }
 
+function syncRundownMessageForSegment() {
+  // Backward-compatibility no-op for older route wiring.
+}
+
 
 app.get('/manifest.json', (req, res) => {
   res.json({
