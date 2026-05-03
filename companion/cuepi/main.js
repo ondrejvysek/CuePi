@@ -208,6 +208,14 @@ class StageTimerInstance extends InstanceBase {
 			} catch (e) {}
 		};
 
+
+		const nextBoundaryIso = (stepMinutes) => {
+			const now = new Date();
+			const stepMs = stepMinutes * 60 * 1000;
+			const next = new Date(Math.ceil(now.getTime() / stepMs) * stepMs);
+			return next.toISOString();
+		};
+
 		this.setActionDefinitions({
 			toggle_playback: {
 				name: "Toggle Start / Pause",
@@ -316,16 +324,71 @@ class StageTimerInstance extends InstanceBase {
 							{ id: "countup", label: "Count-Up" },
 							{ id: "timeofday", label: "Time of Day" },
 							{ id: "logo", label: "Idle / Logo" },
+							{ id: "target", label: "Target" },
 						],
+					},
+					{
+						type: "dropdown",
+						label: "Target Preset",
+						id: "preset",
+						default: "manual",
+						choices: [
+							{ id: "manual", label: "Manual" },
+							{ id: "nextfull", label: "Next Full Hour" },
+							{ id: "nexthalf", label: "Next Half Hour" },
+						],
+					},
+					{
+						type: "textinput",
+						label: "Manual Target ISO (optional)",
+						id: "targetISO",
+						default: "",
+						useVariables: true,
+					},
+					{
+						type: "number",
+						label: "Repeat Seconds (optional)",
+						id: "repeatSeconds",
+						default: 0,
+						min: 0,
+						required: false,
 					},
 				],
 				callback: async (action) => {
+					const mode = action.options.mode;
+					if (mode !== "target") {
+						await sendCmd("mode", {
+							body: { set: mode },
+							legacyQuery: `?set=${mode}`,
+						});
+						return;
+					}
+
+					const preset = action.options.preset || "manual";
+					const payload = { set: "target", targetPreset: preset };
+					let targetISO = String(action.options.targetISO || "").trim();
+					const repeatInput = Number(action.options.repeatSeconds || 0);
+
+					if (preset === "nextfull") {
+						targetISO = nextBoundaryIso(60);
+						payload.targetRepeatSeconds = repeatInput > 0 ? repeatInput : 3600;
+					} else if (preset === "nexthalf") {
+						targetISO = nextBoundaryIso(30);
+						payload.targetRepeatSeconds = repeatInput > 0 ? repeatInput : 1800;
+					} else {
+						if (targetISO) payload.targetISO = targetISO;
+						if (repeatInput > 0) payload.targetRepeatSeconds = repeatInput;
+					}
+
+					if (targetISO) payload.targetISO = targetISO;
+
+					const legacy = new URLSearchParams(payload).toString();
 					await sendCmd("mode", {
-						body: { set: action.options.mode },
-						legacyQuery: `?set=${action.options.mode}`,
+						body: payload,
+						legacyQuery: legacy ? `?${legacy}` : "",
 					});
-					},
 				},
+			},
 				rundown_next: {
 					name: "Rundown: Next Segment",
 					options: [],
@@ -441,6 +504,37 @@ class StageTimerInstance extends InstanceBase {
 				steps: [
 					{
 						down: [{ actionId: "set_mode", options: { mode: mode.id } }],
+						up: [],
+					},
+				],
+				feedbacks: [],
+			};
+		});
+
+		// --- Target Modes ---
+		const targetModes = [
+			{ id: "manual", label: "Manual" },
+			{ id: "nextfull", label: "Next Full" },
+			{ id: "nexthalf", label: "Next Half" },
+		];
+
+		targetModes.forEach((targetMode) => {
+			presets[`target_mode_${targetMode.id}`] = {
+				type: "button",
+				category: "Target Modes",
+				name: `Target ${targetMode.label}`,
+				style: {
+					text: `🎯\n${targetMode.label}`,
+					size: "14",
+					color: combineRgb(255, 255, 255),
+					bgcolor: combineRgb(100, 80, 20),
+					show_topbar: false,
+				},
+				steps: [
+					{
+						down: [
+							{ actionId: "set_mode", options: { mode: "target", preset: targetMode.id, targetISO: "", repeatSeconds: 0 } },
+						],
 						up: [],
 					},
 				],
