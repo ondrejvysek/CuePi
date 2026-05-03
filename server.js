@@ -408,6 +408,11 @@ function applySegmentToTimer(segment, autoStart = false) {
   if (autoStart) timer.start();
 }
 
+function syncRundownMessageForSegment() {
+  // Backward-compatibility no-op for older route wiring.
+}
+
+
 app.get('/manifest.json', (req, res) => {
   res.json({
     name: 'CuePi',
@@ -787,6 +792,47 @@ app.get('/api/rundown/actuals/export', requireAdmin, (req, res) => {
   return fs.createReadStream(actualsLogFile).pipe(res);
 });
 
+
+const followMessageState = {
+  previousTimeLeft: null,
+  activeStepIndex: null,
+};
+
+function processFollowModeAutoMessage(state) {
+  const flowMode = sanitizeRundownFlowMode(bootData.config.rundownFlowMode);
+  if (flowMode !== 'follow') {
+    followMessageState.previousTimeLeft = state.timeLeft;
+    return;
+  }
+
+  if (followMessageState.activeStepIndex !== null && state.currentIndex !== followMessageState.activeStepIndex) {
+    if (timer.state.messageSource === 'auto_rundown') {
+      timer.setMessage('', 'auto_rundown');
+      timer.state.showMessage = false;
+      persistState();
+    }
+    followMessageState.activeStepIndex = null;
+  }
+
+  const threshold = 60;
+  const previous = followMessageState.previousTimeLeft;
+  const crossedThreshold = state.mode === 'countdown' && state.isRunning && Number.isFinite(previous)
+    && previous > threshold && state.timeLeft <= threshold;
+
+  if (crossedThreshold && queue.rundown[state.currentIndex + 1]) {
+    const nextSegment = queue.rundown[state.currentIndex + 1];
+    const nextNote = String(nextSegment.notes || '').trim();
+    if (nextNote) {
+      timer.setMessage(`Up next: ${nextNote}`.slice(0, 280), 'auto_rundown');
+      timer.state.showMessage = true;
+      followMessageState.activeStepIndex = state.currentIndex;
+      persistState();
+    }
+  }
+
+  followMessageState.previousTimeLeft = state.timeLeft;
+}
+
 app.get('/api/companion', (req, res) => {
   const state = publicState();
   const abs = Math.abs(state.timeLeft);
@@ -813,7 +859,9 @@ setInterval(() => {
 }, 500);
 
 setInterval(() => {
-  if (timer.state.isRunning || timer.state.mode === 'timeofday' || timer.state.mode === 'target') {
+  const state = publicState();
+  processFollowModeAutoMessage(state);
+  if (state.isRunning || state.mode === 'timeofday' || state.mode === 'target') {
     broadcast();
   }
 }, 250);
@@ -835,7 +883,7 @@ registerDisplayRoutes(app, {
   setDisplayConfig: (next) => { displayConfig = next; },
 });
 registerTimerRoutes(app, { timer, persistState, broadcast, structuredError, parseIntField, reqValue, legacyRoute, requireAdmin, quickMessages });
-registerRundownRoutes(app, { queue, timer, requireAdmin, structuredError, parseIntField, persistRundown, persistState, broadcast, applySegmentToTimer, appendActualsLog, actualsLogFile, fs });
+registerRundownRoutes(app, { queue, timer, requireAdmin, structuredError, parseIntField, persistRundown, persistState, broadcast, applySegmentToTimer, appendActualsLog, actualsLogFile, fs, syncRundownMessageForSegment });
 registerSystemRoutes(app, {
   requireAdmin,
   structuredError,
