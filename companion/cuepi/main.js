@@ -389,11 +389,19 @@ class StageTimerInstance extends InstanceBase {
 					});
 				},
 			},
-				rundown_next: {
-					name: "Rundown: Next Segment",
+				// Rundown controls
+				rundown_start_current: {
+					name: "Rundown: Start Current Segment",
 					options: [],
 					callback: async () => {
-						await sendCmd("rundown/next");
+						await sendCmd("rundown/run-current");
+					},
+				},
+				rundown_stop: {
+					name: "Rundown: Stop",
+					options: [],
+					callback: async () => {
+						await sendCmd("pause");
 					},
 				},
 				rundown_prev: {
@@ -403,8 +411,15 @@ class StageTimerInstance extends InstanceBase {
 						await sendCmd("rundown/previous");
 					},
 				},
+				rundown_next: {
+					name: "Rundown: Next Segment",
+					options: [],
+					callback: async () => {
+						await sendCmd("rundown/next");
+					},
+				},
 				rundown_run_current: {
-					name: "Rundown: Run Current Segment",
+					name: "Rundown: Run Current Segment (Legacy)",
 					options: [],
 					callback: async () => {
 						await sendCmd("rundown/run-current");
@@ -602,10 +617,10 @@ class StageTimerInstance extends InstanceBase {
 			feedbacks: [],
 		};
 
-		presets["rundown_run_current"] = {
+		presets["rundown_start_current"] = {
 			type: "button",
 			category: "Rundown Controls",
-			name: "Run Current Segment",
+			name: "Start Current Segment",
 			style: {
 				text: "▶\\nRUN",
 				size: "auto",
@@ -613,7 +628,22 @@ class StageTimerInstance extends InstanceBase {
 				bgcolor: combineRgb(0, 120, 0),
 				show_topbar: false,
 			},
-			steps: [{ down: [{ actionId: "rundown_run_current", options: {} }], up: [] }],
+			steps: [{ down: [{ actionId: "rundown_start_current", options: {} }], up: [] }],
+			feedbacks: [],
+		};
+
+		presets["rundown_stop"] = {
+			type: "button",
+			category: "Rundown Controls",
+			name: "Stop Rundown",
+			style: {
+				text: "■\nSTOP",
+				size: "auto",
+				color: combineRgb(255, 255, 255),
+				bgcolor: combineRgb(140, 20, 20),
+				show_topbar: false,
+			},
+			steps: [{ down: [{ actionId: "rundown_stop", options: {} }], up: [] }],
 			feedbacks: [],
 		};
 
