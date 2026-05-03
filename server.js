@@ -773,6 +773,7 @@ app.post('/api/rundown/run-current', requireAdmin, (req, res) => {
   if (!current) return structuredError(res, 400, 'No rundown loaded');
   timer.state.currentIndex = queue.currentIndex;
   applySegmentToTimer(current, true);
+  syncRundownMessageForSegment(current);
   persistState();
   broadcast();
   res.json({ ok: true, currentSegment: current, currentIndex: queue.currentIndex });
@@ -878,7 +879,7 @@ registerDisplayRoutes(app, {
   setDisplayConfig: (next) => { displayConfig = next; },
 });
 registerTimerRoutes(app, { timer, persistState, broadcast, structuredError, parseIntField, reqValue, legacyRoute, requireAdmin, quickMessages });
-registerRundownRoutes(app, { queue, timer, requireAdmin, structuredError, parseIntField, persistRundown, persistState, broadcast, applySegmentToTimer, appendActualsLog, actualsLogFile, fs });
+registerRundownRoutes(app, { queue, timer, requireAdmin, structuredError, parseIntField, persistRundown, persistState, broadcast, applySegmentToTimer, appendActualsLog, actualsLogFile, fs, syncRundownMessageForSegment });
 registerSystemRoutes(app, {
   requireAdmin,
   structuredError,
