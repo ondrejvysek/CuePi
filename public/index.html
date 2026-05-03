@@ -2911,21 +2911,8 @@
 			let selectedDskDisplayId = null;
 			let unsubscribeDskDisplays = null;
 			function getDskBridge() {
-				const nested = window.dskApi || window.electronAPI?.dskApi || window.electron?.dskApi;
-				if (nested && typeof nested.listDisplays === "function" && typeof nested.toggleDsk === "function") return nested;
-				if (window.electronAPI && typeof window.electronAPI.listDisplays === "function" && typeof window.electronAPI.toggleDsk === "function") return window.electronAPI;
-				if (window.electron && typeof window.electron.listDisplays === "function" && typeof window.electron.toggleDsk === "function") return window.electron;
-				const invoke = (typeof window.electronAPI?.invoke === "function" && window.electronAPI.invoke.bind(window.electronAPI)) || (typeof window.electron?.invoke === "function" && window.electron.invoke.bind(window.electron));
-				if (!invoke) return null;
-				return {
-					listDisplays: () => invoke("displays:list"),
-					toggleDsk: (displayId) => invoke("dsk:toggle", displayId),
-					onDisplaysChanged: (handler) => {
-						if (window.electronAPI?.onDisplaysChanged) return window.electronAPI.onDisplaysChanged(handler);
-						if (window.electron?.onDisplaysChanged) return window.electron.onDisplaysChanged(handler);
-						return null;
-					},
-				};
+				if (window.dskApi) return window.dskApi;
+				return null;
 			}
 			function setDskStatusText(message, isLive) {
 				const status = document.getElementById("dskStatus");
@@ -2951,7 +2938,7 @@
 					const tile = document.createElement("div");
 					tile.setAttribute("role", "button");
 					tile.setAttribute("tabindex", "0");
-					const isSelected = selectedDskDisplayId === d.id && !isLive && !isModerator;
+					const isSelected = isLive || selectedDskDisplayId === d.id;
 					tile.className = `screen-tile${isSelected ? " selected" : ""}${isLive ? " live" : ""}${isModerator ? " moderator" : ""}`;
 					tile.innerHTML = `<p class="screen-title">${isModerator ? `${d.label || `Display ${index + 1}`}<br>Moderator` : d.label || `Display ${index + 1}`}</p><div class="screen-footer"><p class="screen-meta">${d.width}x${d.height}</p><button class="power-indicator" aria-label="${isLive ? "Stop" : "Start"} DSK on ${d.label || `Display ${index + 1}`}">⏻</button></div>`;
 					tile.onclick = () => {
@@ -2969,9 +2956,7 @@
 					powerButton.onclick = async (event) => {
 						event.stopPropagation();
 						const bridge = getDskBridge();
-						if (!(bridge && typeof bridge.toggleDsk === "function")) {
-							return;
-						}
+						if (!(bridge && typeof bridge.toggleDsk === "function")) return;
 						try {
 							const state = await bridge.toggleDsk(d.id);
 							const nextLiveIds = new Set(state?.liveDisplayIds || []);
@@ -3008,10 +2993,7 @@
 								display.isModerator === true ||
 								(moderatorId != null && String(display.id) === String(moderatorId)),
 						}));
-						if (selectedDskDisplayId == null) {
-							selectedDskDisplayId =
-								displays.find((x) => !x.isModerator)?.id ?? displays[0]?.id ?? null;
-						}
+						if (selectedDskDisplayId == null) selectedDskDisplayId = displays.find((x) => !x.isModerator)?.id ?? displays[0]?.id ?? null;
 						renderDskDisplayTiles(displays, liveIds);
 						setDskStatusText(
 							liveIds.size > 0 ? "DSK live" : "DSK hidden",
@@ -3035,11 +3017,11 @@
 			}
 
 			function openPresenterOutModal() {
-				const bridge = getDskBridge();
 				if (unsubscribeDskDisplays) {
 					try { unsubscribeDskDisplays(); } catch (_) {}
 					unsubscribeDskDisplays = null;
 				}
+				const bridge = getDskBridge();
 				if (bridge && typeof bridge.onDisplaysChanged === "function") {
 					unsubscribeDskDisplays = bridge.onDisplaysChanged((state) => {
 						const liveIds = new Set(state?.liveDisplayIds || []);
