@@ -2909,36 +2909,23 @@
 			}
 			
 			let selectedDskDisplayId = null;
+			let unsubscribeDskDisplays = null;
 			function getDskBridge() {
-				if (window.dskApi) return window.dskApi;
-				if (window.electronAPI?.dskApi) return window.electronAPI.dskApi;
-				if (window.electron?.dskApi) return window.electron.dskApi;
-				if (
-					window.electronAPI &&
-					typeof window.electronAPI.listDisplays === "function" &&
-					typeof window.electronAPI.toggleDsk === "function"
-				) {
-					return window.electronAPI;
-				}
-				if (
-					window.electron &&
-					typeof window.electron.listDisplays === "function" &&
-					typeof window.electron.toggleDsk === "function"
-				) {
-					return window.electron;
-				}
-				const invoke =
-					(typeof window.electronAPI?.invoke === "function" &&
-						window.electronAPI.invoke.bind(window.electronAPI)) ||
-					(typeof window.electron?.invoke === "function" &&
-						window.electron.invoke.bind(window.electron));
-				if (invoke) {
-					return {
-						listDisplays: () => invoke("displays:list"),
-						toggleDsk: (displayId) => invoke("dsk:toggle", displayId),
-					};
-				}
-				return null;
+				const nested = window.dskApi || window.electronAPI?.dskApi || window.electron?.dskApi;
+				if (nested && typeof nested.listDisplays === "function" && typeof nested.toggleDsk === "function") return nested;
+				if (window.electronAPI && typeof window.electronAPI.listDisplays === "function" && typeof window.electronAPI.toggleDsk === "function") return window.electronAPI;
+				if (window.electron && typeof window.electron.listDisplays === "function" && typeof window.electron.toggleDsk === "function") return window.electron;
+				const invoke = (typeof window.electronAPI?.invoke === "function" && window.electronAPI.invoke.bind(window.electronAPI)) || (typeof window.electron?.invoke === "function" && window.electron.invoke.bind(window.electron));
+				if (!invoke) return null;
+				return {
+					listDisplays: () => invoke("displays:list"),
+					toggleDsk: (displayId) => invoke("dsk:toggle", displayId),
+					onDisplaysChanged: (handler) => {
+						if (window.electronAPI?.onDisplaysChanged) return window.electronAPI.onDisplaysChanged(handler);
+						if (window.electron?.onDisplaysChanged) return window.electron.onDisplaysChanged(handler);
+						return null;
+					},
+				};
 			}
 			function setDskStatusText(message, isLive) {
 				const status = document.getElementById("dskStatus");
@@ -3048,10 +3035,33 @@
 			}
 
 			function openPresenterOutModal() {
+				const bridge = getDskBridge();
+				if (unsubscribeDskDisplays) {
+					try { unsubscribeDskDisplays(); } catch (_) {}
+					unsubscribeDskDisplays = null;
+				}
+				if (bridge && typeof bridge.onDisplaysChanged === "function") {
+					unsubscribeDskDisplays = bridge.onDisplaysChanged((state) => {
+						const liveIds = new Set(state?.liveDisplayIds || []);
+						const moderatorId = state?.moderatorDisplayId;
+						const displays = (state?.displays || []).map((display, idx) => ({
+							id: display.id ?? `display-${idx}`,
+							label: display.label || `Display ${idx + 1}`,
+							width: display?.bounds?.width ?? display.width ?? 0,
+							height: display?.bounds?.height ?? display.height ?? 0,
+							isModerator: display.isModerator === true || (moderatorId != null && String(display.id) === String(moderatorId)),
+						}));
+						renderDskDisplayTiles(displays, liveIds);
+					});
+				}
 				refreshDskDisplays();
 				document.getElementById("presenter-out-modal").classList.add("active");
 			}
 			function closePresenterOutModal() {
+				if (unsubscribeDskDisplays) {
+					try { unsubscribeDskDisplays(); } catch (_) {}
+					unsubscribeDskDisplays = null;
+				}
 				document
 					.getElementById("presenter-out-modal")
 					.classList.remove("active");
