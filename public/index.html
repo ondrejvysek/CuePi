@@ -1005,12 +1005,24 @@
 				color: #b9c6d8;
 				font-size: 16px;
 				margin-bottom: 24px;
+				cursor: pointer;
+				user-select: none;
+			}
+			.advanced-toggle-icon {
+				transition: transform 0.2s ease;
+			}
+			.advanced-header[aria-expanded="true"] .advanced-toggle-icon {
+				transform: rotate(180deg);
 			}
 			.advanced-controls {
 				display: grid;
 				grid-template-columns: repeat(2, 1fr);
 				gap: 28px;
 				margin-bottom: 34px;
+			}
+			.advanced-controls.collapsed,
+			.checkbox-row.collapsed {
+				display: none;
 			}
 			.mini-slider-row {
 				display: grid;
@@ -1763,10 +1775,18 @@
 									</div>
 								</div>
 								<div class="brand-divider"></div>
-								<div class="advanced-header">
-									<span>Advanced</span><span>⌃</span>
+								<div
+									class="advanced-header"
+									id="dsk-advanced-toggle"
+									role="button"
+									tabindex="0"
+									aria-expanded="false"
+									onclick="toggleDskAdvanced()"
+									onkeydown="handleDskAdvancedToggleKey(event)"
+								>
+									<span>Advanced</span><span class="advanced-toggle-icon">⌃</span>
 								</div>
-								<div class="advanced-controls">
+								<div class="advanced-controls collapsed" id="dsk-advanced-controls">
 									<div class="mini-control">
 										<label class="label">Radius</label>
 										<div class="mini-slider-row">
@@ -1819,7 +1839,7 @@
 										</div>
 									</div>
 								</div>
-								<div class="checkbox-row">
+								<div class="checkbox-row collapsed" id="dsk-advanced-checkboxes">
 									<label class="check-item"
 										><input id="dsk-panel-transparent" type="checkbox" />
 										Transparent panel</label
@@ -3546,6 +3566,26 @@
 					await apiPost("/api/display-config", payload);
 				} catch (error) {
 					alert(`Save failed: ${error.message}`);
+				}
+			}
+			function setDskAdvancedExpanded(expanded) {
+				const toggle = document.getElementById("dsk-advanced-toggle");
+				const controls = document.getElementById("dsk-advanced-controls");
+				const checks = document.getElementById("dsk-advanced-checkboxes");
+				if (toggle)
+					toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+				if (controls) controls.classList.toggle("collapsed", !expanded);
+				if (checks) checks.classList.toggle("collapsed", !expanded);
+			}
+			function toggleDskAdvanced() {
+				const toggle = document.getElementById("dsk-advanced-toggle");
+				const expanded = toggle?.getAttribute("aria-expanded") === "true";
+				setDskAdvancedExpanded(!expanded);
+			}
+			function handleDskAdvancedToggleKey(event) {
+				if (event.key === "Enter" || event.key === " ") {
+					event.preventDefault();
+					toggleDskAdvanced();
 				}
 			}
 
