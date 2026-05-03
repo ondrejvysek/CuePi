@@ -1,16 +1,34 @@
 {
-"name": "cuepi",
-"version": "1.0.0",
-"description": "Professional CuePi for Raspberry Pi",
-"main": "server.js",
-"scripts": {
-"start": "node server.js",
-"test": "node --check server.js"
-},
-"dependencies": {
-"express": "^4.18.2",
-"socket.io": "^4.7.2"
-},
-"author": "",
-"license": "ISC"
+  "name": "cuepi",
+  "version": "1.0.0",
+  "description": "Professional CuePi for Raspberry Pi",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --check server.js",
+    "electron:start": "electron .",
+    "electron:pack": "electron-builder --dir",
+    "electron:build": "electron-builder"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^39.1.2",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.cuepi.app",
+    "files": [
+      "electron/**/*",
+      "public/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "buildResources": "assets"
+    }
+  }
 }
