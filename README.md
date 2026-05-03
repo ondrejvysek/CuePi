@@ -121,6 +121,15 @@ The Moderator UI features a hidden **Settings Modal** (Click the Gear Icon in th
 
 In v2-Dev, protected routes (reset/system/rundown/admin actions) can require an admin token.
 
+### Rundown Previous Route Compatibility
+
+For moving to the previous rundown segment, both POST routes are supported:
+
+- `/api/rundown/previous` (existing compatibility route, unchanged)
+- `/api/rundown/prev` (new short alias)
+
+Both endpoints call the same handler and require admin authorization when token protection is enabled.
+
 ### Where to find or set the token
 
 There are two supported sources:
