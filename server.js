@@ -408,6 +408,23 @@ function applySegmentToTimer(segment, autoStart = false) {
   if (autoStart) timer.start();
 }
 
+function syncRundownMessageForSegment(segment) {
+  const flowMode = sanitizeRundownFlowMode(bootData.config.rundownFlowMode);
+  if (flowMode !== 'follow') return;
+
+  const notes = segment && typeof segment.notes === 'string' ? segment.notes.trim() : '';
+  if (notes) {
+    timer.setMessage(notes.slice(0, 280), 'auto_rundown');
+    timer.state.showMessage = true;
+    return;
+  }
+
+  if (timer.state.messageSource === 'auto_rundown') {
+    timer.setMessage('', 'auto_rundown');
+    timer.state.showMessage = false;
+  }
+}
+
 app.get('/manifest.json', (req, res) => {
   res.json({
     name: 'CuePi',
@@ -772,6 +789,7 @@ app.post('/api/rundown/run-current', requireAdmin, (req, res) => {
   if (!current) return structuredError(res, 400, 'No rundown loaded');
   timer.state.currentIndex = queue.currentIndex;
   applySegmentToTimer(current, true);
+  syncRundownMessageForSegment(current);
   persistState();
   broadcast();
   res.json({ ok: true, currentSegment: current, currentIndex: queue.currentIndex });
@@ -835,7 +853,7 @@ registerDisplayRoutes(app, {
   setDisplayConfig: (next) => { displayConfig = next; },
 });
 registerTimerRoutes(app, { timer, persistState, broadcast, structuredError, parseIntField, reqValue, legacyRoute, requireAdmin, quickMessages });
-registerRundownRoutes(app, { queue, timer, requireAdmin, structuredError, parseIntField, persistRundown, persistState, broadcast, applySegmentToTimer, appendActualsLog, actualsLogFile, fs });
+registerRundownRoutes(app, { queue, timer, requireAdmin, structuredError, parseIntField, persistRundown, persistState, broadcast, applySegmentToTimer, appendActualsLog, actualsLogFile, fs, syncRundownMessageForSegment });
 registerSystemRoutes(app, {
   requireAdmin,
   structuredError,

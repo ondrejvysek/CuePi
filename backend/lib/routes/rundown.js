@@ -1,5 +1,5 @@
 function registerRundownRoutes(app, ctx) {
-  const { queue, timer, requireAdmin, structuredError, parseIntField, persistRundown, persistState, broadcast, applySegmentToTimer, appendActualsLog, actualsLogFile, fs } = ctx;
+  const { queue, timer, requireAdmin, structuredError, parseIntField, persistRundown, persistState, broadcast, applySegmentToTimer, appendActualsLog, actualsLogFile, fs, syncRundownMessageForSegment } = ctx;
 
   app.get('/api/rundown', (req, res) => res.json(queue.getState()));
   app.post('/api/rundown/next', requireAdmin, (req, res) => {
@@ -12,6 +12,7 @@ function registerRundownRoutes(app, ctx) {
     if (!nextSegment) return structuredError(res, 400, 'No rundown loaded');
     timer.state.currentIndex = queue.currentIndex;
     applySegmentToTimer(nextSegment, true);
+    if (typeof syncRundownMessageForSegment === 'function') syncRundownMessageForSegment(nextSegment);
     persistRundown(); persistState(); broadcast();
     return res.json({ ok: true, currentSegment: nextSegment, currentIndex: queue.currentIndex });
   });
