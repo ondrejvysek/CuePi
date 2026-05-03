@@ -2913,6 +2913,20 @@
 				if (window.dskApi) return window.dskApi;
 				if (window.electronAPI?.dskApi) return window.electronAPI.dskApi;
 				if (window.electron?.dskApi) return window.electron.dskApi;
+				if (
+					window.electronAPI &&
+					typeof window.electronAPI.listDisplays === "function" &&
+					typeof window.electronAPI.toggleDsk === "function"
+				) {
+					return window.electronAPI;
+				}
+				if (
+					window.electron &&
+					typeof window.electron.listDisplays === "function" &&
+					typeof window.electron.toggleDsk === "function"
+				) {
+					return window.electron;
+				}
 				return null;
 			}
 			function setDskStatusText(message, isLive) {
