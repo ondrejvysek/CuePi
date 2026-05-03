@@ -595,6 +595,11 @@
 				display: grid;
 				gap: 14px;
 			}
+			.right-stack {
+				display: grid;
+				gap: 14px;
+				align-content: start;
+			}
 			.card {
 				background: linear-gradient(
 					145deg,
@@ -1643,22 +1648,6 @@
 								</div>
 							</div>
 							<div class="field-group">
-								<label class="label">Electron View</label>
-								<div class="button-row">
-									<button
-										onclick="openPresenterOutputWindow('/presenter.html')"
-										class="button secondary"
-									>
-										Open Classic Presenter</button
-									><button
-										onclick="openPresenterOutputWindow('/presenter-dsk.html')"
-										class="button primary"
-									>
-										Open DSK Presenter
-									</button>
-								</div>
-							</div>
-							<div class="field-group">
 								<label class="label">HDMI Output</label>
 								<div class="hdmi-row">
 									<div class="select-wrap">
@@ -1695,6 +1684,155 @@
 								Display selection uses browser/electron screen enumeration when
 								available.
 							</p>
+						</section>
+					</div>
+					<div class="right-stack">
+						<section class="card brand-card">
+							<div>
+								<div class="card-header">
+									<div class="section-title">
+										<span class="icon"
+											><svg viewBox="0 0 24 24" aria-hidden="true">
+												<path d="M4 20h4l11-11a2.1 2.1 0 0 0-3-3L5 17v3z"></path>
+												<path d="M14 6l4 4"></path></svg></span
+										>DSK Branding
+									</div>
+									<button
+										onclick="loadDskBrandingDefaults()"
+										class="ghost-button"
+									>
+										⟲ Load Default Colors
+									</button>
+								</div>
+								<div class="brand-grid">
+									<div class="color-field">
+										<span class="label">Panel</span
+										><input
+											id="dsk-panel-color"
+											type="color"
+											class="sys-input swatch"
+										/>
+									</div>
+									<div class="color-field">
+										<span class="label">OK</span
+										><input
+											id="dsk-text-ok"
+											type="color"
+											class="sys-input swatch"
+										/>
+									</div>
+									<div class="color-field">
+										<span class="label">Warn</span
+										><input
+											id="dsk-text-warning"
+											type="color"
+											class="sys-input swatch"
+										/>
+									</div>
+									<div class="color-field">
+										<span class="label">Over</span
+										><input
+											id="dsk-text-overflow"
+											type="color"
+											class="sys-input swatch"
+										/>
+									</div>
+									<div class="color-field">
+										<span class="label">Progress OK</span
+										><input
+											id="dsk-progress-ok"
+											type="color"
+											class="sys-input swatch"
+										/>
+									</div>
+									<div class="color-field">
+										<span class="label">Progress Warn</span
+										><input
+											id="dsk-progress-warning"
+											type="color"
+											class="sys-input swatch"
+										/>
+									</div>
+									<div class="color-field">
+										<span class="label">Progress Over</span
+										><input
+											id="dsk-progress-overflow"
+											type="color"
+											class="sys-input swatch"
+										/>
+									</div>
+								</div>
+								<div class="brand-divider"></div>
+								<div class="advanced-header">
+									<span>Advanced</span><span>⌃</span>
+								</div>
+								<div class="advanced-controls">
+									<div class="mini-control">
+										<label class="label">Radius</label>
+										<div class="mini-slider-row">
+											<input
+												id="dsk-panel-radius"
+												type="range"
+												min="0"
+												max="80"
+												step="1"
+												class="sys-input"
+											/><input
+												id="dsk-panel-radius-input"
+												type="number"
+												class="sys-input"
+											/>
+										</div>
+									</div>
+									<div class="mini-control">
+										<label class="label">Pad VH</label>
+										<div class="mini-slider-row">
+											<input
+												id="dsk-panel-pad-vh"
+												type="range"
+												min="0"
+												max="8"
+												step="0.1"
+												class="sys-input"
+											/><input
+												id="dsk-panel-pad-vh-input"
+												type="number"
+												class="sys-input"
+											/>
+										</div>
+									</div>
+									<div class="mini-control">
+										<label class="label">Pad VW</label>
+										<div class="mini-slider-row">
+											<input
+												id="dsk-panel-pad-vw"
+												type="range"
+												min="0"
+												max="8"
+												step="0.1"
+												class="sys-input"
+											/><input
+												id="dsk-panel-pad-vw-input"
+												type="number"
+												class="sys-input"
+											/>
+										</div>
+									</div>
+								</div>
+								<div class="checkbox-row">
+									<label class="check-item"
+										><input id="dsk-panel-transparent" type="checkbox" />
+										Transparent panel</label
+									><label class="check-item"
+										><input
+											id="dsk-progress-enabled"
+											type="checkbox"
+											checked
+										/>
+										Show progress bar</label
+									>
+								</div>
+							</div>
 						</section>
 						<section class="card">
 							<div class="card-header">
@@ -1801,154 +1939,7 @@
 							</div>
 						</section>
 					</div>
-					<section class="card brand-card">
-						<div>
-							<div class="card-header">
-								<div class="section-title">
-									<span class="icon"
-										><svg viewBox="0 0 24 24" aria-hidden="true">
-											<path d="M4 20h4l11-11a2.1 2.1 0 0 0-3-3L5 17v3z"></path>
-											<path d="M14 6l4 4"></path></svg></span
-									>DSK Branding
-								</div>
-								<button
-									onclick="loadDskBrandingDefaults()"
-									class="ghost-button"
-								>
-									⟲ Load Default Colors
-								</button>
-							</div>
-							<div class="brand-grid">
-								<div class="color-field">
-									<span class="label">Panel</span
-									><input
-										id="dsk-panel-color"
-										type="color"
-										class="sys-input swatch"
-									/>
-								</div>
-								<div class="color-field">
-									<span class="label">OK</span
-									><input
-										id="dsk-text-ok"
-										type="color"
-										class="sys-input swatch"
-									/>
-								</div>
-								<div class="color-field">
-									<span class="label">Warn</span
-									><input
-										id="dsk-text-warning"
-										type="color"
-										class="sys-input swatch"
-									/>
-								</div>
-								<div class="color-field">
-									<span class="label">Over</span
-									><input
-										id="dsk-text-overflow"
-										type="color"
-										class="sys-input swatch"
-									/>
-								</div>
-								<div class="color-field">
-									<span class="label">Progress OK</span
-									><input
-										id="dsk-progress-ok"
-										type="color"
-										class="sys-input swatch"
-									/>
-								</div>
-								<div class="color-field">
-									<span class="label">Progress Warn</span
-									><input
-										id="dsk-progress-warning"
-										type="color"
-										class="sys-input swatch"
-									/>
-								</div>
-								<div class="color-field">
-									<span class="label">Progress Over</span
-									><input
-										id="dsk-progress-overflow"
-										type="color"
-										class="sys-input swatch"
-									/>
-								</div>
-							</div>
-							<div class="brand-divider"></div>
-							<div class="advanced-header">
-								<span>Advanced</span><span>⌃</span>
-							</div>
-							<div class="advanced-controls">
-								<div class="mini-control">
-									<label class="label">Radius</label>
-									<div class="mini-slider-row">
-										<input
-											id="dsk-panel-radius"
-											type="range"
-											min="0"
-											max="80"
-											step="1"
-											class="sys-input"
-										/><input
-											id="dsk-panel-radius-input"
-											type="number"
-											class="sys-input"
-										/>
-									</div>
-								</div>
-								<div class="mini-control">
-									<label class="label">Pad VH</label>
-									<div class="mini-slider-row">
-										<input
-											id="dsk-panel-pad-vh"
-											type="range"
-											min="0"
-											max="8"
-											step="0.1"
-											class="sys-input"
-										/><input
-											id="dsk-panel-pad-vh-input"
-											type="number"
-											class="sys-input"
-										/>
-									</div>
-								</div>
-								<div class="mini-control">
-									<label class="label">Pad VW</label>
-									<div class="mini-slider-row">
-										<input
-											id="dsk-panel-pad-vw"
-											type="range"
-											min="0"
-											max="8"
-											step="0.1"
-											class="sys-input"
-										/><input
-											id="dsk-panel-pad-vw-input"
-											type="number"
-											class="sys-input"
-										/>
-									</div>
-								</div>
-							</div>
-							<div class="checkbox-row">
-								<label class="check-item"
-									><input
-										type="checkbox"
-										id="dsk-panel-transparent"
-									/>Transparent panel</label
-								><label class="check-item"
-									><input
-										type="checkbox"
-										id="dsk-progress-enabled"
-										checked
-									/>Show progress bar</label
-								>
-							</div>
-						</div>
-					</section>
+					
 				</section>
 				<footer class="footer">
 					<div class="footer-left">
