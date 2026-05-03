@@ -1693,8 +1693,7 @@
 							</div>
 							<div class="screen-picker" id="screenPicker"></div>
 							<p class="hint">
-								Display selection uses browser/electron screen enumeration when
-								available.
+								When running in Electron, display tiles control live DSK windows.
 							</p>
 						</section>
 					</div>
@@ -2919,8 +2918,22 @@
 					tile.type = "button";
 					tile.className = "screen-tile" + (selectedDskDisplayId === d.id ? " selected live" : "");
 					tile.innerHTML = `<p class="screen-title">${d.label || `Display ${index + 1}`}</p><div class="screen-footer"><p class="screen-meta">${d.width}x${d.height}</p><span class="power-indicator">⏻</span></div>`;
-					tile.onclick = () => {
+					tile.onclick = async () => {
 						selectedDskDisplayId = d.id;
+						if (window.dskApi && typeof window.dskApi.toggleDsk === "function") {
+							try {
+								const state = await window.dskApi.toggleDsk(d.id);
+								const liveIds = new Set(state?.liveDisplayIds || []);
+								setDskStatusText(
+									liveIds.size > 0 ? "DSK live" : "DSK hidden",
+									liveIds.size > 0,
+								);
+								renderDskDisplayTiles(displays);
+								return;
+							} catch (error) {
+								console.warn("Electron DSK toggle failed:", error.message);
+							}
+						}
 						renderDskDisplayTiles(displays);
 						setDskStatusText("DSK live", true);
 					};
@@ -2930,6 +2943,23 @@
 			}
 			async function refreshDskDisplays() {
 				try {
+					if (window.dskApi && typeof window.dskApi.listDisplays === "function") {
+						const state = await window.dskApi.listDisplays();
+						const liveIds = new Set(state?.liveDisplayIds || []);
+						const displays = (state?.displays || []).map((display, idx) => ({
+							id: display.id ?? `display-${idx}`,
+							label: display.label || `Display ${idx + 1}`,
+							width: display?.bounds?.width ?? display.width ?? 0,
+							height: display?.bounds?.height ?? display.height ?? 0,
+						}));
+						selectedDskDisplayId = [...liveIds][0] || selectedDskDisplayId;
+						renderDskDisplayTiles(displays);
+						setDskStatusText(
+							liveIds.size > 0 ? "DSK live" : "DSK hidden",
+							liveIds.size > 0,
+						);
+						return;
+					}
 					if (window.getScreenDetails) {
 						const details = await window.getScreenDetails();
 						const displays = (details.screens || []).map((screen, idx) => ({
