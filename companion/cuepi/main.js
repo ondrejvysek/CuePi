@@ -345,7 +345,7 @@ class StageTimerInstance extends InstanceBase {
 							{ id: "countup", label: "Count-Up" },
 							{ id: "timeofday", label: "Time of Day" },
 							{ id: "logo", label: "Idle / Logo" },
-							{ id: "target", label: "Target" },
+							{ id: "target", label: "Count-to (Target)" },
 						],
 					},
 					{
@@ -354,9 +354,9 @@ class StageTimerInstance extends InstanceBase {
 						id: "preset",
 						default: "manual",
 						choices: [
-							{ id: "manual", label: "Manual" },
-							{ id: "nextfull", label: "Next Full Hour" },
-							{ id: "nexthalf", label: "Next Half Hour" },
+							{ id: "manual", label: "Manual (use Target ISO)" },
+							{ id: "nextfull", label: "Count-to Next Full Hour" },
+							{ id: "nexthalf", label: "Count-to Next Half Hour" },
 						],
 					},
 					{
@@ -403,7 +403,10 @@ class StageTimerInstance extends InstanceBase {
 
 					if (targetISO) payload.targetISO = targetISO;
 
-					const legacy = new URLSearchParams(payload).toString();
+					const hasRequiredTargetFields = Boolean(payload.targetISO);
+					const legacy = hasRequiredTargetFields
+						? new URLSearchParams(payload).toString()
+						: "";
 					await sendCmd("mode", {
 						body: payload,
 						legacyQuery: legacy ? `?${legacy}` : "",
@@ -544,6 +547,7 @@ class StageTimerInstance extends InstanceBase {
 			{ id: "countup", label: "Count-Up" },
 			{ id: "timeofday", label: "Time of Day" },
 			{ id: "logo", label: "Idle / Logo" },
+			{ id: "target", label: "Count-to (Target)" },
 		];
 		modes.forEach((mode) => {
 			presets[`mode_${mode.id}`] = {
@@ -569,7 +573,7 @@ class StageTimerInstance extends InstanceBase {
 
 		// --- Target Modes ---
 		const targetModes = [
-			{ id: "manual", label: "Manual" },
+			{ id: "manual", label: "Manual (use Target ISO)" },
 			{ id: "nextfull", label: "Next Full" },
 			{ id: "nexthalf", label: "Next Half" },
 		];
@@ -578,7 +582,7 @@ class StageTimerInstance extends InstanceBase {
 			presets[`target_mode_${targetMode.id}`] = {
 				type: "button",
 				category: "Target Modes",
-				name: `Target ${targetMode.label}`,
+				name: `Count-to ${targetMode.label}`,
 				style: {
 					text: `🎯\n${targetMode.label}`,
 					size: "14",
