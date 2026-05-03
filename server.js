@@ -806,6 +806,7 @@ function processFollowModeAutoMessage(state) {
     if (timer.state.messageSource === 'auto_rundown') {
       timer.setMessage('', 'auto_rundown');
       timer.state.showMessage = false;
+      persistState();
     }
     followMessageState.activeStepIndex = null;
   }
