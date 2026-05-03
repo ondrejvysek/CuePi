@@ -844,6 +844,14 @@
 				background: #44b326;
 				color: #fff;
 			}
+			.screen-tile.moderator {
+				background: #0f73ff;
+				color: #fff;
+			}
+			.screen-tile.moderator.selected {
+				background: linear-gradient(135deg, #0f73ff 0 50%, #44b326 50% 100%);
+				color: #fff;
+			}
 			.screen-title {
 				margin: 0;
 				font-size: 15px;
@@ -869,6 +877,12 @@
 				background: rgba(5, 15, 29, 0.22);
 				font-size: 13px;
 				font-weight: 900;
+				border: 0;
+				cursor: pointer;
+			}
+			.screen-tile.live .power-indicator {
+				background: #ff2736;
+				color: #fff;
 			}
 			.placement-content {
 				display: grid;
@@ -2901,7 +2915,7 @@
 				status.classList.toggle("hidden", !isLive);
 				status.innerHTML = `<span class="status-dot"></span> ${message}`;
 			}
-			function renderDskDisplayTiles(displays) {
+			function renderDskDisplayTiles(displays, liveDisplayIds = new Set()) {
 				const picker = document.getElementById("screenPicker");
 				if (!picker) return;
 				picker.innerHTML = "";
@@ -2914,32 +2928,49 @@
 					return;
 				}
 				displays.forEach((d, index) => {
-					const tile = document.createElement("button");
-					tile.type = "button";
-					tile.className = "screen-tile" + (selectedDskDisplayId === d.id ? " selected live" : "");
-					tile.innerHTML = `<p class="screen-title">${d.label || `Display ${index + 1}`}</p><div class="screen-footer"><p class="screen-meta">${d.width}x${d.height}</p><span class="power-indicator">⏻</span></div>`;
-					tile.onclick = async () => {
+					const isLive = liveDisplayIds.has(d.id);
+					const isModerator = d.isModerator === true;
+					const tile = document.createElement("div");
+					tile.setAttribute("role", "button");
+					tile.setAttribute("tabindex", "0");
+					tile.className = `screen-tile${selectedDskDisplayId === d.id ? " selected" : ""}${isLive ? " live" : ""}${isModerator ? " moderator" : ""}`;
+					tile.innerHTML = `<p class="screen-title">${isModerator ? `${d.label || `Display ${index + 1}`}<br>Moderator` : d.label || `Display ${index + 1}`}</p><div class="screen-footer"><p class="screen-meta">${d.width}x${d.height}</p><button class="power-indicator" aria-label="${isLive ? "Stop" : "Start"} DSK on ${d.label || `Display ${index + 1}`}">⏻</button></div>`;
+					tile.onclick = () => {
+						if (isLive) return;
 						selectedDskDisplayId = d.id;
-						if (window.dskApi && typeof window.dskApi.toggleDsk === "function") {
-							try {
-								const state = await window.dskApi.toggleDsk(d.id);
-								const liveIds = new Set(state?.liveDisplayIds || []);
-								setDskStatusText(
-									liveIds.size > 0 ? "DSK live" : "DSK hidden",
-									liveIds.size > 0,
-								);
-								renderDskDisplayTiles(displays);
-								return;
-							} catch (error) {
-								console.warn("Electron DSK toggle failed:", error.message);
-							}
+						renderDskDisplayTiles(displays, liveDisplayIds);
+					};
+					tile.onkeydown = (event) => {
+						if (event.key === "Enter" || event.key === " ") {
+							event.preventDefault();
+							tile.onclick();
 						}
-						renderDskDisplayTiles(displays);
-						setDskStatusText("DSK live", true);
+					};
+					const powerButton = tile.querySelector(".power-indicator");
+					powerButton.onclick = async (event) => {
+						event.stopPropagation();
+						if (!(window.dskApi && typeof window.dskApi.toggleDsk === "function")) {
+							return;
+						}
+						try {
+							const state = await window.dskApi.toggleDsk(d.id);
+							const nextLiveIds = new Set(state?.liveDisplayIds || []);
+							const nextDisplays = (state?.displays || displays).map((display, idx) => ({
+								id: display.id ?? `display-${idx}`,
+								label: display.label || `Display ${idx + 1}`,
+								width: display?.bounds?.width ?? display.width ?? 0,
+								height: display?.bounds?.height ?? display.height ?? 0,
+								isModerator: display.isModerator === true,
+							}));
+							setDskStatusText(nextLiveIds.size > 0 ? "DSK live" : "DSK hidden", nextLiveIds.size > 0);
+							renderDskDisplayTiles(nextDisplays, nextLiveIds);
+						} catch (error) {
+							console.warn("Electron DSK toggle failed:", error.message);
+						}
 					};
 					picker.appendChild(tile);
 				});
-				setDskStatusText(selectedDskDisplayId ? "DSK live" : "DSK hidden", !!selectedDskDisplayId);
+				setDskStatusText(liveDisplayIds.size > 0 ? "DSK live" : "DSK hidden", liveDisplayIds.size > 0);
 			}
 			async function refreshDskDisplays() {
 				try {
@@ -2951,9 +2982,10 @@
 							label: display.label || `Display ${idx + 1}`,
 							width: display?.bounds?.width ?? display.width ?? 0,
 							height: display?.bounds?.height ?? display.height ?? 0,
+							isModerator: display.isModerator === true,
 						}));
 						selectedDskDisplayId = [...liveIds][0] || selectedDskDisplayId;
-						renderDskDisplayTiles(displays);
+						renderDskDisplayTiles(displays, liveIds);
 						setDskStatusText(
 							liveIds.size > 0 ? "DSK live" : "DSK hidden",
 							liveIds.size > 0,
@@ -2968,7 +3000,7 @@
 							width: screen.width,
 							height: screen.height,
 						}));
-						renderDskDisplayTiles(displays);
+						renderDskDisplayTiles(displays, new Set());
 						return;
 					}
 					renderDskDisplayTiles([]);
