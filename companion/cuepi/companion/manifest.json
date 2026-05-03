@@ -1,26 +1,26 @@
 {
-  "id": "custom-cuepi",
-  "name": "CuePi",
-  "shortname": "stagetimer",
-  "description": "Custom control module for the CuePi API.",
-  "version": "1.0.0",
-  "license": "MIT",
-  "repository": "",
-  "bugs": "",
-  "maintainers": [
-    {
-      "name": "Studio Admin",
-      "email": "admin@example.com"
-    }
-  ],
-  "legacyIds": [],
-  "runtime": {
-    "type": "node18",
-    "api": "nodejs-ipc",
-    "apiVersion": "0.0.0",
-    "entrypoint": "../main.js"
-  },
-  "manufacturer": "Custom Studios",
-  "products": ["CuePi"],
-  "keywords": ["timer", "stage", "clock"]
+	"id": "custom-cuepi",
+	"name": "CuePi",
+	"shortname": "cuepi",
+	"description": "Control module for the CuePi API.",
+	"version": "2.0.0",
+	"license": "MIT",
+	"repository": "",
+	"bugs": "",
+	"maintainers": [
+		{
+			"name": "Ondrej Vysek",
+			"email": "ondrej@vysek.net"
+		}
+	],
+	"legacyIds": [],
+	"runtime": {
+		"type": "node18",
+		"api": "nodejs-ipc",
+		"apiVersion": "0.0.0",
+		"entrypoint": "../main.js"
+	},
+	"manufacturer": "Ondrej Vysek",
+	"products": ["CuePi"],
+	"keywords": ["timer", "stage", "clock"]
 }
