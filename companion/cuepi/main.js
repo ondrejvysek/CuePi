@@ -23,6 +23,7 @@ class StageTimerInstance extends InstanceBase {
 				current_segment: '',
 				current_index: 0,
 				rundown_length: 0,
+				rundown_flow_mode: 'overflow',
 			};
 
 		this.initActions();
@@ -93,6 +94,7 @@ class StageTimerInstance extends InstanceBase {
 							current_segment: data.current_segment || '',
 							current_index: data.current_index || 0,
 							rundown_length: data.rundown_length || 0,
+							rundown_flow_mode: data.rundown_flow_mode || 'overflow',
 						};
 
 					// Push dynamic message slots (1 through 10)
@@ -104,7 +106,7 @@ class StageTimerInstance extends InstanceBase {
 					}
 
 					this.setVariableValues(updates);
-					this.checkFeedbacks("timer_state", "msg_state");
+					this.checkFeedbacks("timer_state", "msg_state", "rundown_flow_mode_state");
 				}
 			} catch (e) {
 				this.updateStatus(
@@ -124,6 +126,7 @@ class StageTimerInstance extends InstanceBase {
 				{ name: "Current Rundown Segment", variableId: "current_segment" },
 				{ name: "Current Rundown Index", variableId: "current_index" },
 				{ name: "Rundown Length", variableId: "rundown_length" },
+				{ name: "Rundown Flow Mode", variableId: "rundown_flow_mode" },
 		];
 
 		// Define 10 dynamic slots for message bank
@@ -164,6 +167,24 @@ class StageTimerInstance extends InstanceBase {
 					};
 				},
 			},
+			rundown_flow_mode_state: {
+				name: "Rundown Flow Mode Match",
+				type: "boolean",
+				label: "Rundown flow mode equals selected value",
+				defaultStyle: {
+					bgcolor: combineRgb(0, 80, 160),
+					color: combineRgb(255, 255, 255),
+				},
+				options: [{
+					type: "dropdown",
+					label: "Flow Mode",
+					id: "mode",
+					default: "follow",
+					choices: [{ id: "follow", label: "Follow" }, { id: "overflow", label: "Overflow" }],
+				}],
+				callback: (feedback) => this.state.rundown_flow_mode === feedback.options.mode,
+			},
+
 			msg_state: {
 				name: "Message Active Background",
 				type: "boolean",
@@ -411,6 +432,26 @@ class StageTimerInstance extends InstanceBase {
 						await sendCmd("rundown/previous");
 					},
 				},
+				rundown_flow_mode: {
+					name: "Rundown: Set Flow Mode",
+					options: [
+						{
+							type: "dropdown",
+							label: "Flow Mode",
+							id: "mode",
+							default: "overflow",
+							choices: [
+								{ id: "follow", label: "Follow" },
+								{ id: "overflow", label: "Overflow" },
+							],
+						},
+					],
+					callback: async (action) => {
+						await sendCmd("rundown/flow-mode", {
+							body: { mode: action.options.mode === "follow" ? "follow" : "overflow" },
+						});
+					},
+				},
 				rundown_next: {
 					name: "Rundown: Next Segment",
 					options: [],
@@ -647,7 +688,7 @@ class StageTimerInstance extends InstanceBase {
 			feedbacks: [],
 		};
 
-		presets["rundown_prev"] = {
+			presets["rundown_prev"] = {
 			type: "button",
 			category: "Rundown Controls",
 			name: "Previous Segment",
@@ -659,8 +700,38 @@ class StageTimerInstance extends InstanceBase {
 				show_topbar: false,
 			},
 			steps: [{ down: [{ actionId: "rundown_prev", options: {} }], up: [] }],
-			feedbacks: [],
-		};
+				feedbacks: [],
+			};
+
+			presets["rundown_flow_follow"] = {
+				type: "button",
+				category: "Rundown Controls",
+				name: "Rundown Flow: Follow",
+				style: {
+					text: "▶️\\nFOLLOW",
+					size: "14",
+					color: combineRgb(255, 255, 255),
+					bgcolor: combineRgb(20, 100, 20),
+					show_topbar: false,
+				},
+				steps: [{ down: [{ actionId: "rundown_flow_mode", options: { mode: "follow" } }], up: [] }],
+				feedbacks: [{ feedbackId: "rundown_flow_mode_state", options: { mode: "follow" } }],
+			};
+
+			presets["rundown_flow_overflow"] = {
+				type: "button",
+				category: "Rundown Controls",
+				name: "Rundown Flow: Overflow",
+				style: {
+					text: "⏸️\\nOVER",
+					size: "14",
+					color: combineRgb(255, 255, 255),
+					bgcolor: combineRgb(120, 60, 0),
+					show_topbar: false,
+				},
+				steps: [{ down: [{ actionId: "rundown_flow_mode", options: { mode: "overflow" } }], up: [] }],
+				feedbacks: [{ feedbackId: "rundown_flow_mode_state", options: { mode: "overflow" } }],
+			};
 
 		presets["rundown_next"] = {
 			type: "button",

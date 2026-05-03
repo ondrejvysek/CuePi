@@ -42,6 +42,13 @@ if (!bootData.config.uuid) {
   store.saveConfig(bootData.config);
 }
 
+function sanitizeRundownFlowMode(mode) {
+  return mode === 'follow' ? 'follow' : 'overflow';
+}
+
+bootData.config.rundownFlowMode = sanitizeRundownFlowMode(bootData.config.rundownFlowMode);
+store.saveConfig(bootData.config);
+
 const bindHost = process.env.BIND_HOST || '0.0.0.0';
 const corsOrigin = process.env.CORS_ORIGIN || bootData.config.corsOrigin || '*';
 const adminToken = process.env.STAGE_TIMER_ADMIN_TOKEN || bootData.config.adminToken || '';
@@ -204,6 +211,7 @@ function publicState() {
     currentIndex: queue.currentIndex,
     v2OnlyMode: strictV2Only,
     presenterColors: sanitizePresenterColors(displayConfig.presenterColors),
+    rundownFlowMode: sanitizeRundownFlowMode(bootData.config.rundownFlowMode),
   });
 }
 
@@ -698,6 +706,19 @@ app.post('/api/rundown/import', requireAdmin, (req, res) => {
   return res.json({ ok: true, importMode, imported: parsed.segments.length, warnings: parsed.warnings, ...queue.getState() });
 });
 
+
+app.get('/api/rundown/flow-mode', (req, res) => {
+  res.json({ mode: sanitizeRundownFlowMode(bootData.config.rundownFlowMode) });
+});
+
+app.post('/api/rundown/flow-mode', requireAdmin, (req, res) => {
+  const mode = sanitizeRundownFlowMode(req.body && req.body.mode);
+  bootData.config.rundownFlowMode = mode;
+  store.saveConfig(bootData.config);
+  broadcast();
+  res.json({ ok: true, mode });
+});
+
 app.post('/api/rundown/item/add', requireAdmin, (req, res) => {
   const segment = req.body && req.body.segment;
   const validation = validateRundownSegment(segment, 'segment');
@@ -780,6 +801,7 @@ app.get('/api/companion', (req, res) => {
     current_segment: queue.getCurrent() ? queue.getCurrent().name : '',
     current_index: queue.currentIndex,
     rundown_length: queue.rundown.length,
+    rundown_flow_mode: sanitizeRundownFlowMode(bootData.config.rundownFlowMode),
   });
 });
 
