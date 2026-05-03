@@ -17,3 +17,11 @@ Smart Feedbacks: Buttons will automatically turn Green, Yellow (under 2m), and R
 Configuration
 
 Simply enter the IP address of the Raspberry Pi running the Node.js timer server in the module configuration.
+
+
+Rundown previous actions
+
+- Preferred short alias: `POST /api/rundown/prev`
+- Backward-compatible route: `POST /api/rundown/previous`
+
+Both routes are supported and mapped to the same backend handler.

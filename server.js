@@ -752,7 +752,7 @@ app.post('/api/rundown/item/remove', requireAdmin, (req, res) => {
   res.json({ ok: true, removed, ...queue.getState() });
 });
 
-app.post('/api/rundown/previous', requireAdmin, (req, res) => {
+const handleRundownPrevious = (req, res) => {
   const prevSegment = queue.previous();
   if (!prevSegment) return structuredError(res, 400, 'No rundown loaded');
 
@@ -761,8 +761,11 @@ app.post('/api/rundown/previous', requireAdmin, (req, res) => {
   persistRundown();
   persistState();
   broadcast();
-  res.json({ ok: true, currentSegment: prevSegment, currentIndex: queue.currentIndex });
-});
+  return res.json({ ok: true, currentSegment: prevSegment, currentIndex: queue.currentIndex });
+};
+
+app.post('/api/rundown/previous', requireAdmin, handleRundownPrevious);
+app.post('/api/rundown/prev', requireAdmin, handleRundownPrevious);
 
 app.post('/api/rundown/run-current', requireAdmin, (req, res) => {
   const current = queue.getCurrent();
