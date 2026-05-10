@@ -1,0 +1,11 @@
+{
+  "name": "cuepi-desktop",
+  "private": true,
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^31.7.7"
+  }
+}
