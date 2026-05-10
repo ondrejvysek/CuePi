@@ -28,7 +28,7 @@ async function createMainWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true,
+      sandbox: false,
     },
   });
   await mainWin.loadURL(localUrl);
@@ -86,7 +86,7 @@ async function openDskWindow(displayId = null) {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true,
+      sandbox: false,
     },
   });
   await dskWin.loadURL(`${localUrl}/presenter-dsk.html`);
