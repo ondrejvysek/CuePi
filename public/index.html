@@ -1535,7 +1535,7 @@
 								</div>
 								<div class="field-group" id="desktop-dsk-open-group" style="display: none">
 									<label class="label">Available Monitors</label>
-									<div id="desktop-monitor-list" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px;"></div>
+									<div id="desktop-monitor-list" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:8px;"></div>
 									<p class="hint">Blue = moderator display. Green = active output display. Click monitor to toggle output.</p>
 								</div>
 									<div class="field-group" id="output-route-group">
@@ -2642,14 +2642,14 @@
 						card.style.border = "1px solid #334155";
 						const title = document.createElement("div");
 						title.style.fontWeight = "700";
-						title.style.fontSize = "24px";
+						title.style.fontSize = "18px";
 						title.innerText = `${display.isPrimary ? "Display 1" : "Display"}${isModerator ? " Moderator" : ""}`;
 						const sub = document.createElement("div");
-						sub.style.fontSize = "14px";
+						sub.style.fontSize = "12px";
 						sub.style.opacity = "0.9";
 						sub.innerText = `${display.resolution || `${display.bounds.width}x${display.bounds.height}`} • ${display.label || "Unknown model"}`;
 						const hw = document.createElement("div");
-						hw.style.fontSize = "12px";
+						hw.style.fontSize = "11px";
 						hw.style.opacity = "0.75";
 						hw.innerText = `Scale ${display.scaleFactor || 1}x • Rot ${display.rotation || 0}°`;
 						const status = document.createElement("div");
@@ -3459,7 +3459,7 @@
 				await saveDskBranding();
 			}
 
-			async function saveDskBranding() {
+				async function saveDskBranding() {
 				const payload = {
 					dskBranding: {
 						panelColor:
@@ -3508,6 +3508,15 @@
 					await apiPost("/api/display-config", payload);
 				} catch (error) {
 					alert(`Save failed: ${error.message}`);
+				}
+				let dskBrandingSaveTimer = null;
+				function scheduleDskBrandingSave() {
+					if (dskBrandingSaveTimer) clearTimeout(dskBrandingSaveTimer);
+					dskBrandingSaveTimer = setTimeout(() => {
+						saveDskBranding().catch((error) =>
+							console.warn("Auto-save DSK branding failed:", error),
+						);
+					}, 180);
 				}
 			}
 
@@ -4395,18 +4404,21 @@
 						presenterMargin = Number(marginEl.value || 24);
 						updatePresenterPlacementReadout();
 					});
-				[
-					"dsk-panel-color",
-					"dsk-text-ok",
-					"dsk-text-warning",
-					"dsk-text-overflow",
-					"dsk-progress-ok",
-					"dsk-progress-warning",
-					"dsk-progress-overflow",
-				].forEach((id) => {
-					const el = document.getElementById(id);
-					if (el) el.addEventListener("input", refreshDskColorPreviews);
-				});
+					[
+						"dsk-panel-color",
+						"dsk-text-ok",
+						"dsk-text-warning",
+						"dsk-text-overflow",
+						"dsk-progress-ok",
+						"dsk-progress-warning",
+						"dsk-progress-overflow",
+					].forEach((id) => {
+						const el = document.getElementById(id);
+						if (el) {
+							el.addEventListener("input", refreshDskColorPreviews);
+							el.addEventListener("input", scheduleDskBrandingSave);
+						}
+					});
 				[
 					["dsk-panel-radius", "dsk-panel-radius-input"],
 					["dsk-panel-pad-vh", "dsk-panel-pad-vh-input"],
@@ -4414,15 +4426,21 @@
 				].forEach(([rangeId, inputId]) => {
 					const rangeEl = document.getElementById(rangeId);
 					const inputEl = document.getElementById(inputId);
-					if (rangeEl && inputEl) {
-						rangeEl.addEventListener("input", () => {
-							inputEl.value = rangeEl.value;
-						});
-						inputEl.addEventListener("input", () => {
-							rangeEl.value = inputEl.value;
-						});
-					}
-				});
+						if (rangeEl && inputEl) {
+							rangeEl.addEventListener("input", () => {
+								inputEl.value = rangeEl.value;
+								scheduleDskBrandingSave();
+							});
+							inputEl.addEventListener("input", () => {
+								rangeEl.value = inputEl.value;
+								scheduleDskBrandingSave();
+							});
+						}
+					});
+					["dsk-panel-transparent", "dsk-progress-enabled"].forEach((id) => {
+						const el = document.getElementById(id);
+						if (el) el.addEventListener("change", scheduleDskBrandingSave);
+					});
 				updatePresenterPlacementReadout();
 				refreshDskColorPreviews();
 				setTargetModePreset("manual");

@@ -1,5 +1,5 @@
 const path = require('path');
-const { app, BrowserWindow, ipcMain, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, dialog } = require('electron');
 const { createCuePiServer } = require('../../../backend/app');
 
 let cuepi;
@@ -32,6 +32,22 @@ async function createMainWindow() {
     },
   });
   await mainWin.loadURL(localUrl);
+  mainWin.on('close', async (event) => {
+    if (!dskWin || dskWin.isDestroyed()) return;
+    const choice = await dialog.showMessageBox(mainWin, {
+      type: 'warning',
+      buttons: ['Cancel', 'Exit and close DSK'],
+      defaultId: 0,
+      cancelId: 0,
+      title: 'Confirm Exit',
+      message: 'DSK output is active. Close CuePi and stop DSK output?',
+    });
+    if (choice.response === 0) {
+      event.preventDefault();
+      return;
+    }
+    await closeDskWindow();
+  });
 }
 
 function getDisplaySnapshot() {
@@ -105,5 +121,6 @@ ipcMain.handle('cuepi:toggle-dsk-output', async (_event, payload = {}) => {
 
 app.whenReady().then(createMainWindow);
 app.on('before-quit', async () => {
+  await closeDskWindow();
   if (cuepi) await cuepi.stop();
 });
