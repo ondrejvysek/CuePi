@@ -1534,11 +1534,12 @@
 									</div>
 								</div>
 								<div class="field-group" id="desktop-dsk-open-group" style="display: none">
-									<label class="label">Computer DSK Output Window</label>
+									<label class="label">Available Monitors</label>
+									<div id="desktop-monitor-list" style="display:grid; gap:8px;"></div>
 									<button class="button apply" onclick="openDesktopDskWindow()">
-										🪟 Open DSK Window
+										🪟 Launch Fullscreen Output
 									</button>
-									<p class="hint">Desktop mode opens a dedicated DSK output window.</p>
+									<p class="hint">Blue = moderator display. Green = active output display.</p>
 								</div>
 									<div class="field-group">
 									<label class="label" id="output-route-label">HDMI Output</label>
@@ -2478,7 +2479,9 @@
 			let pendingRundownImportWarnings = [];
 			let autoContinueInFlight = false;
 			let rundownFlowMode = "overflow";
-			let v2OnlyMode = false;
+				let v2OnlyMode = false;
+				let desktopSelectedDisplayId = null;
+				let desktopMonitorSnapshot = null;
 
 				let cuepiRuntime = null;
 					function hideSystemGroupById(id) {
@@ -2512,6 +2515,7 @@
 									if (optPresenter) optPresenter.innerText = "Computer: Classic Presenter";
 									if (optDsk) optDsk.innerText = "Computer: DSK Presenter";
 									if (desktopDskGroup) desktopDskGroup.style.display = "";
+									await refreshDesktopDisplays();
 								}
 							if (!caps.wifiManagement) hideSystemGroupById('group-wifi');
 							if (!caps.staticIpManagement) hideSystemGroupById('group-static-ip');
@@ -2612,13 +2616,51 @@
 				async function openDesktopDskWindow() {
 					try {
 						if (window.cuepiDesktop && typeof window.cuepiDesktop.openDskWindow === "function") {
-							await window.cuepiDesktop.openDskWindow();
+							await window.cuepiDesktop.openDskWindow({
+								displayId: desktopSelectedDisplayId,
+							});
+							await refreshDesktopDisplays();
 							return;
 						}
 					} catch (error) {
 						console.warn("Desktop DSK open failed:", error);
 					}
 					openPresenterOutputWindow("/presenter-dsk.html");
+				}
+				function renderDesktopDisplays(snapshot) {
+					const list = document.getElementById("desktop-monitor-list");
+					if (!list) return;
+					list.innerHTML = "";
+					(snapshot?.displays || []).forEach((display) => {
+						const button = document.createElement("button");
+						button.className = "sys-btn";
+						button.style.textAlign = "left";
+						button.style.width = "100%";
+						const isModerator = String(snapshot.moderatorDisplayId) === String(display.id);
+						const isActive = String(snapshot.activeOutputDisplayId) === String(display.id);
+						button.style.background = isActive ? "#16a34a" : isModerator ? "#2563eb" : "";
+						button.innerText = `${display.isPrimary ? "Primary" : "Display"} ${display.id} • ${display.label}${isModerator ? " • Moderator" : ""}${isActive ? " • Output ON" : ""}`;
+						button.onclick = () => {
+							desktopSelectedDisplayId = display.id;
+							renderDesktopDisplays(snapshot);
+						};
+						if (String(desktopSelectedDisplayId) === String(display.id)) {
+							button.style.outline = "2px solid #e2e8f0";
+						}
+						list.appendChild(button);
+					});
+				}
+				async function refreshDesktopDisplays() {
+					if (!window.cuepiDesktop || typeof window.cuepiDesktop.getDisplays !== "function") return;
+					try {
+						desktopMonitorSnapshot = await window.cuepiDesktop.getDisplays();
+						if (!desktopSelectedDisplayId && desktopMonitorSnapshot?.displays?.[0]) {
+							desktopSelectedDisplayId = desktopMonitorSnapshot.displays[0].id;
+						}
+						renderDesktopDisplays(desktopMonitorSnapshot);
+					} catch (error) {
+						console.warn("Failed to load display list:", error);
+					}
 				}
 			function refreshDskColorPreviews() {
 				[

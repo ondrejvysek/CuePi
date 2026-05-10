@@ -1,5 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('cuepiDesktop', {
-  openDskWindow: () => ipcRenderer.invoke('cuepi:open-dsk-window'),
+  getDisplays: () => ipcRenderer.invoke('cuepi:get-displays'),
+  openDskWindow: (payload) => ipcRenderer.invoke('cuepi:open-dsk-window', payload || {}),
 });

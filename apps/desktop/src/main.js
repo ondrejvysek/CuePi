@@ -1,11 +1,12 @@
 const path = require('path');
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, screen } = require('electron');
 const { createCuePiServer } = require('../../../backend/app');
 
 let cuepi;
 let mainWin;
 let dskWin;
 let localUrl = '';
+let activeOutputDisplayId = null;
 
 async function startLocalCuePi() {
   cuepi = createCuePiServer({
@@ -33,17 +34,34 @@ async function createMainWindow() {
   await mainWin.loadURL(localUrl);
 }
 
-async function openDskWindow() {
+function getDisplaySnapshot() {
+  const displays = screen.getAllDisplays().map((d) => ({
+    id: d.id,
+    label: `${d.bounds.width}x${d.bounds.height} @ (${d.bounds.x},${d.bounds.y})`,
+    isPrimary: d.id === screen.getPrimaryDisplay().id,
+    bounds: d.bounds,
+  }));
+  const moderatorDisplayId = mainWin ? screen.getDisplayMatching(mainWin.getBounds()).id : null;
+  return { displays, moderatorDisplayId, activeOutputDisplayId };
+}
+
+async function openDskWindow(displayId = null) {
   if (!localUrl) return;
   if (dskWin && !dskWin.isDestroyed()) {
-    dskWin.show();
-    dskWin.focus();
-    return;
+    dskWin.close();
   }
+  const targetDisplay = displayId
+    ? screen.getAllDisplays().find((d) => String(d.id) === String(displayId))
+    : null;
+  const bounds = targetDisplay ? targetDisplay.bounds : { width: 1280, height: 720, x: 0, y: 0 };
   dskWin = new BrowserWindow({
-    width: 1280,
-    height: 720,
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.width,
+    height: bounds.height,
     autoHideMenuBar: true,
+    frame: false,
+    fullscreen: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -52,11 +70,14 @@ async function openDskWindow() {
     },
   });
   await dskWin.loadURL(`${localUrl}/presenter-dsk.html`);
-  dskWin.on('closed', () => { dskWin = null; });
+  activeOutputDisplayId = targetDisplay ? targetDisplay.id : null;
+  dskWin.on('closed', () => { dskWin = null; activeOutputDisplayId = null; });
 }
 
-ipcMain.handle('cuepi:open-dsk-window', async () => {
-  await openDskWindow();
+ipcMain.handle('cuepi:get-displays', async () => getDisplaySnapshot());
+
+ipcMain.handle('cuepi:open-dsk-window', async (_event, payload = {}) => {
+  await openDskWindow(payload.displayId || null);
   return { ok: true };
 });
 
