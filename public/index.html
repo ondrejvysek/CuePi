@@ -1015,7 +1015,7 @@
 					</button>
 				</div>
 
-				<div class="sys-group">
+					<div class="sys-group" id="group-wifi">
 					<h3>Wi-Fi Connection</h3>
 					<div class="sys-row">
 						<button onclick="scanWifi()" class="sys-btn" style="width: 100%">
@@ -1044,7 +1044,7 @@
 					></p>
 				</div>
 
-				<div class="sys-group">
+					<div class="sys-group" id="group-static-ip">
 					<h3>Static IP (For Current Wi-Fi)</h3>
 					<p
 						id="current-ip-info"
@@ -1094,7 +1094,7 @@
 					</div>
 				</div>
 
-				<div class="sys-group">
+					<div class="sys-group" id="group-fallback-ap">
 					<div
 						style="
 							display: flex;
@@ -1129,7 +1129,7 @@
 					</div>
 				</div>
 
-				<div class="sys-group">
+					<div class="sys-group" id="group-system-mgmt">
 					<h3>System Management</h3>
 					<div class="sys-row">
 						<input
@@ -1519,8 +1519,8 @@
 									>Output
 								</div>
 							</div>
-							<div class="field-group">
-								<label class="label">Display Profile</label>
+								<div class="field-group">
+									<label class="label">Display Profile</label>
 								<div class="select-wrap">
 									<select id="display-profile-selector" class="sys-input">
 										<option value="program">Program (safe)</option>
@@ -1531,23 +1531,29 @@
 											Luma DSK (black/white luminance style)
 										</option>
 									</select>
-								</div>
-							</div>
-							<div class="field-group">
-								<label class="label">HDMI Output</label>
-								<div class="hdmi-row">
-									<div class="select-wrap">
-										<select id="hdmi-view-selector" class="sys-input">
-											<option value="presenter">HDMI: Classic Presenter</option>
-											<option value="presenter_dsk">HDMI: DSK Presenter</option>
-										</select>
 									</div>
-									<button onclick="saveHdmiView()" class="button apply">
-										⟳ Apply HDMI View
-									</button>
+									<p class="hint" id="desktop-debug-info" style="margin-top:8px;">Runtime debug: initializing…</p>
 								</div>
-								<p class="hint">Applying HDMI view will restart the output.</p>
-							</div>
+								<div class="field-group" id="desktop-dsk-open-group" style="display: none">
+									<label class="label">Available Monitors</label>
+									<div id="desktop-monitor-list" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:8px;"></div>
+									<p class="hint">Blue = moderator display. Green = active output display. Click monitor to toggle output.</p>
+								</div>
+									<div class="field-group" id="output-route-group" style="display: none">
+									<label class="label" id="output-route-label">HDMI Output</label>
+									<div class="hdmi-row">
+										<div class="select-wrap">
+											<select id="hdmi-view-selector" class="sys-input">
+												<option value="presenter" id="hdmi-opt-presenter">HDMI: Classic Presenter</option>
+												<option value="presenter_dsk" id="hdmi-opt-dsk">HDMI: DSK Presenter</option>
+											</select>
+										</div>
+										<button onclick="saveHdmiView()" class="button apply" id="output-route-apply-btn">
+											⟳ Apply HDMI View
+										</button>
+									</div>
+									<p class="hint" id="output-route-hint">Applying HDMI view will restart the output.</p>
+								</div>
 						</section>
 						<section class="card">
 							<div class="card-header">
@@ -1674,59 +1680,66 @@
 							<div class="brand-grid">
 								<div class="color-field">
 									<span class="label">Panel</span
-									><input
-										id="dsk-panel-color"
-										type="color"
-										class="sys-input swatch"
-									/>
+										><input
+											id="dsk-panel-color"
+											type="color"
+											value="#111111"
+											class="sys-input swatch"
+										/>
 								</div>
 								<div class="color-field">
 									<span class="label">OK</span
-									><input
-										id="dsk-text-ok"
-										type="color"
-										class="sys-input swatch"
-									/>
+										><input
+											id="dsk-text-ok"
+											type="color"
+											value="#ffffff"
+											class="sys-input swatch"
+										/>
 								</div>
 								<div class="color-field">
 									<span class="label">Warn</span
-									><input
-										id="dsk-text-warning"
-										type="color"
-										class="sys-input swatch"
-									/>
+										><input
+											id="dsk-text-warning"
+											type="color"
+											value="#f97316"
+											class="sys-input swatch"
+										/>
 								</div>
 								<div class="color-field">
 									<span class="label">Over</span
-									><input
-										id="dsk-text-overflow"
-										type="color"
-										class="sys-input swatch"
-									/>
+										><input
+											id="dsk-text-overflow"
+											type="color"
+											value="#ef4444"
+											class="sys-input swatch"
+										/>
 								</div>
 								<div class="color-field">
 									<span class="label">Progress OK</span
-									><input
-										id="dsk-progress-ok"
-										type="color"
-										class="sys-input swatch"
-									/>
+										><input
+											id="dsk-progress-ok"
+											type="color"
+											value="#ffffff"
+											class="sys-input swatch"
+										/>
 								</div>
 								<div class="color-field">
 									<span class="label">Progress Warn</span
-									><input
-										id="dsk-progress-warning"
-										type="color"
-										class="sys-input swatch"
-									/>
+										><input
+											id="dsk-progress-warning"
+											type="color"
+											value="#f97316"
+											class="sys-input swatch"
+										/>
 								</div>
 								<div class="color-field">
 									<span class="label">Progress Over</span
-									><input
-										id="dsk-progress-overflow"
-										type="color"
-										class="sys-input swatch"
-									/>
+										><input
+											id="dsk-progress-overflow"
+											type="color"
+											value="#ef4444"
+											class="sys-input swatch"
+										/>
 								</div>
 							</div>
 							<div class="brand-divider"></div>
@@ -2471,7 +2484,84 @@
 			let pendingRundownImportWarnings = [];
 			let autoContinueInFlight = false;
 			let rundownFlowMode = "overflow";
-			let v2OnlyMode = false;
+				let v2OnlyMode = false;
+				let desktopSelectedDisplayId = null;
+				let desktopMonitorSnapshot = null;
+				const isDesktopBridgeAvailable = () =>
+					!!(window.cuepiDesktop && window.cuepiDesktop.isDesktop);
+
+				let cuepiRuntime = null;
+					function hideSystemGroupById(id) {
+						const el = document.getElementById(id);
+						if (el) el.style.display = "none";
+					}
+						async function loadRuntimeContext() {
+							const forceDesktop =
+								isDesktopBridgeAvailable() || /Electron/i.test(navigator.userAgent);
+							const debug = document.getElementById("desktop-debug-info");
+							if (debug)
+								debug.innerText = `Runtime debug: forceDesktop=${forceDesktop}, bridge=${isDesktopBridgeAvailable() ? "yes" : "no"}, uaElectron=${/Electron/i.test(navigator.userAgent)}`;
+							try {
+								const res = await fetch('/api/runtime');
+								if (!res.ok) throw new Error(`runtime ${res.status}`);
+								cuepiRuntime = await res.json();
+								if (debug) debug.innerText += `, runtimeShell=${cuepiRuntime?.shell || "?"}`;
+								const caps = (cuepiRuntime && cuepiRuntime.capabilities) || {};
+								const isPiOutput = forceDesktop ? false : !!caps.kioskHdmiOutput;
+							const routeLabel = document.getElementById("output-route-label");
+								const routeHint = document.getElementById("output-route-hint");
+								const applyBtn = document.getElementById("output-route-apply-btn");
+								const optPresenter = document.getElementById("hdmi-opt-presenter");
+								const optDsk = document.getElementById("hdmi-opt-dsk");
+								const desktopDskGroup = document.getElementById("desktop-dsk-open-group");
+								const outputRouteGroup = document.getElementById("output-route-group");
+								if (isPiOutput) {
+								if (routeLabel) routeLabel.innerText = "HDMI Output";
+								if (routeHint) routeHint.innerText = "Applying HDMI view will restart the output.";
+								if (applyBtn) applyBtn.style.display = "";
+									if (optPresenter) optPresenter.innerText = "HDMI: Classic Presenter";
+									if (optDsk) optDsk.innerText = "HDMI: DSK Presenter";
+									if (desktopDskGroup) desktopDskGroup.style.display = "none";
+									if (outputRouteGroup) outputRouteGroup.style.display = "";
+									if (desktopDisplayRefreshTimer) {
+										clearInterval(desktopDisplayRefreshTimer);
+										desktopDisplayRefreshTimer = null;
+									}
+								} else {
+								if (routeLabel) routeLabel.innerText = "Computer DSK Output";
+								if (routeHint) routeHint.innerText = "Desktop mode uses local computer display output.";
+								if (applyBtn) applyBtn.style.display = "none";
+									if (optPresenter) optPresenter.innerText = "Computer: Classic Presenter";
+									if (optDsk) optDsk.innerText = "Computer: DSK Presenter";
+									if (desktopDskGroup) desktopDskGroup.style.display = "";
+									if (outputRouteGroup) outputRouteGroup.style.display = "none";
+									await refreshDesktopDisplays();
+									if (!desktopDisplayRefreshTimer) {
+										desktopDisplayRefreshTimer = setInterval(refreshDesktopDisplays, 3000);
+									}
+								}
+							if (!caps.wifiManagement) hideSystemGroupById('group-wifi');
+							if (!caps.staticIpManagement) hideSystemGroupById('group-static-ip');
+							if (!caps.fallbackAccessPoint) hideSystemGroupById('group-fallback-ap');
+							if (!caps.softwareUpdate && !caps.systemService) hideSystemGroupById('group-system-mgmt');
+							} catch (error) {
+								console.warn("Runtime context unavailable, using desktop bridge fallback:", error);
+								if (debug) debug.innerText += `, runtimeFetch=failed`;
+								if (forceDesktop) {
+									const desktopDskGroup = document.getElementById("desktop-dsk-open-group");
+									const outputRouteGroup = document.getElementById("output-route-group");
+									const routeLabel = document.getElementById("output-route-label");
+									const routeHint = document.getElementById("output-route-hint");
+									const applyBtn = document.getElementById("output-route-apply-btn");
+									if (desktopDskGroup) desktopDskGroup.style.display = "";
+									if (outputRouteGroup) outputRouteGroup.style.display = "none";
+									if (routeLabel) routeLabel.innerText = "Computer DSK Output";
+									if (routeHint) routeHint.innerText = "Desktop mode uses local computer display output.";
+									if (applyBtn) applyBtn.style.display = "none";
+									await refreshDesktopDisplays();
+								}
+							}
+					}
 			let selectedTargetISO = null;
 			let selectedTargetRepeatSeconds = 0;
 			let targetModePreset = "manual";
@@ -2555,13 +2645,93 @@
 						: 4;
 				updatePresenterPlacementReadout();
 			}
-			function openPresenterOutputWindow(pathname) {
-				window.open(
+				function openPresenterOutputWindow(pathname) {
+					window.open(
 					pathname,
 					"_blank",
 					"popup=yes,menubar=no,toolbar=no,location=no,status=no,scrollbars=no,resizable=yes,fullscreen=yes,width=1920,height=1080",
-				);
-			}
+					);
+				}
+				let desktopDisplayRefreshTimer = null;
+				function renderDesktopDisplays(snapshot) {
+					const list = document.getElementById("desktop-monitor-list");
+					if (!list) return;
+					list.innerHTML = "";
+					(snapshot?.displays || []).forEach((display) => {
+						const card = document.createElement("button");
+						card.className = "sys-btn";
+						card.style.width = "100%";
+						card.style.display = "grid";
+						card.style.gridTemplateRows = "1fr auto";
+						card.style.aspectRatio = "16 / 9";
+						card.style.borderRadius = "14px";
+						card.style.padding = "14px";
+						card.style.alignItems = "start";
+						card.style.textAlign = "left";
+						const isModerator = String(snapshot.moderatorDisplayId) === String(display.id);
+						const isActive = String(snapshot.activeOutputDisplayId) === String(display.id);
+						card.style.background = isActive ? "#16a34a" : isModerator ? "#2563eb" : "#0b1a33";
+						card.style.border = "1px solid #334155";
+						const title = document.createElement("div");
+						title.style.fontWeight = "700";
+						title.style.fontSize = "18px";
+						title.innerText = `${display.isPrimary ? "Display 1" : "Display"}${isModerator ? " Moderator" : ""}`;
+						const sub = document.createElement("div");
+						sub.style.fontSize = "12px";
+						sub.style.opacity = "0.9";
+						sub.innerText = `${display.resolution || `${display.bounds.width}x${display.bounds.height}`} • ${display.label || "Unknown model"}`;
+						const hw = document.createElement("div");
+						hw.style.fontSize = "11px";
+						hw.style.opacity = "0.75";
+						hw.innerText = `Scale ${display.scaleFactor || 1}x • Rot ${display.rotation || 0}°`;
+						const status = document.createElement("div");
+						status.style.fontSize = "12px";
+						status.style.justifySelf = "end";
+						status.innerText = isActive ? "● Output ON" : isModerator ? "● Moderator" : "● Available";
+						card.appendChild(title);
+						card.appendChild(sub);
+						card.appendChild(hw);
+						card.appendChild(status);
+						card.onclick = async () => {
+							desktopSelectedDisplayId = display.id;
+							try {
+								await saveDisplayProfile();
+								await savePresenterPlacement();
+								await saveDskBranding();
+								if (window.cuepiDesktop && typeof window.cuepiDesktop.toggleDskOutput === "function") {
+										await window.cuepiDesktop.toggleDskOutput({ displayId: display.id });
+										await refreshDesktopDisplays();
+										return;
+									}
+								} catch (error) {
+									console.warn("Toggle DSK output failed:", error);
+								}
+								renderDesktopDisplays(snapshot);
+							};
+						if (String(desktopSelectedDisplayId) === String(display.id)) {
+							card.style.outline = "2px solid #e2e8f0";
+						}
+						list.appendChild(card);
+					});
+				}
+				async function refreshDesktopDisplays() {
+					const debug = document.getElementById("desktop-debug-info");
+					if (!window.cuepiDesktop || typeof window.cuepiDesktop.getDisplays !== "function") {
+						if (debug) debug.innerText += " | getDisplays unavailable";
+						return;
+					}
+					try {
+						desktopMonitorSnapshot = await window.cuepiDesktop.getDisplays();
+						if (debug) debug.innerText += ` | displays=${desktopMonitorSnapshot?.displays?.length || 0}`;
+						if (!desktopSelectedDisplayId && desktopMonitorSnapshot?.displays?.[0]) {
+							desktopSelectedDisplayId = desktopMonitorSnapshot.displays[0].id;
+						}
+						renderDesktopDisplays(desktopMonitorSnapshot);
+					} catch (error) {
+						console.warn("Failed to load display list:", error);
+						if (debug) debug.innerText += " | getDisplays error";
+					}
+				}
 			function refreshDskColorPreviews() {
 				[
 					"dsk-panel-color",
@@ -3327,7 +3497,7 @@
 				await saveDskBranding();
 			}
 
-			async function saveDskBranding() {
+				async function saveDskBranding() {
 				const payload = {
 					dskBranding: {
 						panelColor:
@@ -3376,6 +3546,15 @@
 					await apiPost("/api/display-config", payload);
 				} catch (error) {
 					alert(`Save failed: ${error.message}`);
+				}
+				let dskBrandingSaveTimer = null;
+				function scheduleDskBrandingSave() {
+					if (dskBrandingSaveTimer) clearTimeout(dskBrandingSaveTimer);
+					dskBrandingSaveTimer = setTimeout(() => {
+						saveDskBranding().catch((error) =>
+							console.warn("Auto-save DSK branding failed:", error),
+						);
+					}, 180);
 				}
 			}
 
@@ -4263,18 +4442,21 @@
 						presenterMargin = Number(marginEl.value || 24);
 						updatePresenterPlacementReadout();
 					});
-				[
-					"dsk-panel-color",
-					"dsk-text-ok",
-					"dsk-text-warning",
-					"dsk-text-overflow",
-					"dsk-progress-ok",
-					"dsk-progress-warning",
-					"dsk-progress-overflow",
-				].forEach((id) => {
-					const el = document.getElementById(id);
-					if (el) el.addEventListener("input", refreshDskColorPreviews);
-				});
+					[
+						"dsk-panel-color",
+						"dsk-text-ok",
+						"dsk-text-warning",
+						"dsk-text-overflow",
+						"dsk-progress-ok",
+						"dsk-progress-warning",
+						"dsk-progress-overflow",
+					].forEach((id) => {
+						const el = document.getElementById(id);
+						if (el) {
+							el.addEventListener("input", refreshDskColorPreviews);
+							el.addEventListener("input", scheduleDskBrandingSave);
+						}
+					});
 				[
 					["dsk-panel-radius", "dsk-panel-radius-input"],
 					["dsk-panel-pad-vh", "dsk-panel-pad-vh-input"],
@@ -4282,19 +4464,34 @@
 				].forEach(([rangeId, inputId]) => {
 					const rangeEl = document.getElementById(rangeId);
 					const inputEl = document.getElementById(inputId);
-					if (rangeEl && inputEl) {
-						rangeEl.addEventListener("input", () => {
-							inputEl.value = rangeEl.value;
-						});
-						inputEl.addEventListener("input", () => {
-							rangeEl.value = inputEl.value;
-						});
+						if (rangeEl && inputEl) {
+							rangeEl.addEventListener("input", () => {
+								inputEl.value = rangeEl.value;
+								scheduleDskBrandingSave();
+							});
+							inputEl.addEventListener("input", () => {
+								rangeEl.value = inputEl.value;
+								scheduleDskBrandingSave();
+							});
+						}
+					});
+					["dsk-panel-transparent", "dsk-progress-enabled"].forEach((id) => {
+						const el = document.getElementById(id);
+						if (el) el.addEventListener("change", scheduleDskBrandingSave);
+					});
+					updatePresenterPlacementReadout();
+					refreshDskColorPreviews();
+					applyDskBrandingDefaultsToInputs();
+					setTargetModePreset("manual");
+					if (isDesktopBridgeAvailable() || /Electron/i.test(navigator.userAgent)) {
+						const desktopDskGroup = document.getElementById("desktop-dsk-open-group");
+						const outputRouteGroup = document.getElementById("output-route-group");
+						if (desktopDskGroup) desktopDskGroup.style.display = "";
+						if (outputRouteGroup) outputRouteGroup.style.display = "none";
+						refreshDesktopDisplays();
 					}
-				});
-				updatePresenterPlacementReadout();
-				refreshDskColorPreviews();
-				setTargetModePreset("manual");
-				loadDisplayConfig();
+					loadRuntimeContext();
+					loadDisplayConfig();
 				loadRundown();
 			});
 		</script>

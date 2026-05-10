@@ -60,10 +60,11 @@ Once the SD card is flashed, insert it into the Raspberry Pi, connect your HDMI 
 1. Open a terminal on your computer.  
 2. SSH into the Raspberry Pi (replace YOUR\_USERNAME with the username you created):  
    ssh YOUR\_USERNAME@stagetimer.local  
-3. Once logged in, run the **One-Line Installer**:
+3. Once logged in, run the **One-Line Installer** from the `UIChange-Dev` branch:
 ```
-curl -sSL https://raw.githubusercontent.com/ondrejvysek/cuepi/refs/heads/main/setup.sh?v=$RANDOM | bash
+curl -sSL https://raw.githubusercontent.com/ondrejvysek/CuePi/refs/heads/UIChange-Dev/setup.sh?v=$RANDOM | bash
 ```
+Branch reference: https://github.com/ondrejvysek/CuePi/tree/UIChange-Dev
 ### **What the installer does:**
 
 * Installs Node.js, Chromium, and the X11 display manager.  
@@ -226,7 +227,7 @@ You can download the module and move it to the developer folder in one action. T
 SSH into your Companion Pi and run this block:
 ```
 1. Download the repository to a temporary folder
-git clone https://github.com/ondrejvysek/cuepi.git /tmp/cuepi
+git clone --branch UIChange-Dev https://github.com/ondrejvysek/CuePi.git /tmp/cuepi
 
 # 2. Create the developer directory and copy the pre-built files
 sudo mkdir -p /opt/companion-module-dev/cuepi
