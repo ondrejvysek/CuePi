@@ -1532,7 +1532,6 @@
 										</option>
 									</select>
 									</div>
-									<p class="hint" id="desktop-debug-info" style="margin-top:8px;">Runtime debug: initializing…</p>
 								</div>
 								<div class="field-group" id="desktop-dsk-open-group" style="display: none">
 									<label class="label">Available Monitors</label>
@@ -2498,14 +2497,10 @@
 						async function loadRuntimeContext() {
 							const forceDesktop =
 								isDesktopBridgeAvailable() || /Electron/i.test(navigator.userAgent);
-							const debug = document.getElementById("desktop-debug-info");
-							if (debug)
-								debug.innerText = `Runtime debug: forceDesktop=${forceDesktop}, bridge=${isDesktopBridgeAvailable() ? "yes" : "no"}, uaElectron=${/Electron/i.test(navigator.userAgent)}`;
 							try {
 								const res = await fetch('/api/runtime');
 								if (!res.ok) throw new Error(`runtime ${res.status}`);
 								cuepiRuntime = await res.json();
-								if (debug) debug.innerText += `, runtimeShell=${cuepiRuntime?.shell || "?"}`;
 								const caps = (cuepiRuntime && cuepiRuntime.capabilities) || {};
 								const isPiOutput = forceDesktop ? false : !!caps.kioskHdmiOutput;
 							const routeLabel = document.getElementById("output-route-label");
@@ -2546,7 +2541,6 @@
 							if (!caps.softwareUpdate && !caps.systemService) hideSystemGroupById('group-system-mgmt');
 							} catch (error) {
 								console.warn("Runtime context unavailable, using desktop bridge fallback:", error);
-								if (debug) debug.innerText += `, runtimeFetch=failed`;
 								if (forceDesktop) {
 									const desktopDskGroup = document.getElementById("desktop-dsk-open-group");
 									const outputRouteGroup = document.getElementById("output-route-group");
@@ -2635,7 +2629,7 @@
 				if (marginChip) marginChip.innerText = `${presenterMargin} px`;
 			}
 
-			function setPresenterAnchor(anchor) {
+				function setPresenterAnchor(anchor) {
 				const numericAnchor = Number(anchor);
 				presenterPosition =
 					Number.isInteger(numericAnchor) &&
@@ -2643,8 +2637,9 @@
 					numericAnchor <= 8
 						? numericAnchor
 						: 4;
-				updatePresenterPlacementReadout();
-			}
+					updatePresenterPlacementReadout();
+					schedulePresenterPlacementSave();
+				}
 				function openPresenterOutputWindow(pathname) {
 					window.open(
 					pathname,
@@ -2715,21 +2710,17 @@
 					});
 				}
 				async function refreshDesktopDisplays() {
-					const debug = document.getElementById("desktop-debug-info");
 					if (!window.cuepiDesktop || typeof window.cuepiDesktop.getDisplays !== "function") {
-						if (debug) debug.innerText += " | getDisplays unavailable";
 						return;
 					}
 					try {
 						desktopMonitorSnapshot = await window.cuepiDesktop.getDisplays();
-						if (debug) debug.innerText += ` | displays=${desktopMonitorSnapshot?.displays?.length || 0}`;
 						if (!desktopSelectedDisplayId && desktopMonitorSnapshot?.displays?.[0]) {
 							desktopSelectedDisplayId = desktopMonitorSnapshot.displays[0].id;
 						}
 						renderDesktopDisplays(desktopMonitorSnapshot);
 					} catch (error) {
 						console.warn("Failed to load display list:", error);
-						if (debug) debug.innerText += " | getDisplays error";
 					}
 				}
 			function refreshDskColorPreviews() {
@@ -3428,7 +3419,7 @@
 				}
 			}
 
-			async function savePresenterPlacement() {
+				async function savePresenterPlacement() {
 				const scaleEl = document.getElementById("presenter-scale");
 				const marginEl = document.getElementById("presenter-margin");
 				presenterScale = Math.min(
@@ -3462,6 +3453,15 @@
 					updatePresenterPlacementReadout();
 				} catch (error) {
 					alert(`Save failed: ${error.message}`);
+				}
+				let presenterPlacementSaveTimer = null;
+				function schedulePresenterPlacementSave() {
+					if (presenterPlacementSaveTimer) clearTimeout(presenterPlacementSaveTimer);
+					presenterPlacementSaveTimer = setTimeout(() => {
+						savePresenterPlacement().catch((error) =>
+							console.warn("Auto-save presenter placement failed:", error),
+						);
+					}, 180);
 				}
 			}
 
@@ -4433,16 +4433,18 @@
 					getHintThreshold();
 				const scaleEl = document.getElementById("presenter-scale");
 				const marginEl = document.getElementById("presenter-margin");
-				if (scaleEl)
-					scaleEl.addEventListener("input", () => {
-						presenterScale = Number(scaleEl.value || 1);
-						updatePresenterPlacementReadout();
-					});
-				if (marginEl)
-					marginEl.addEventListener("input", () => {
-						presenterMargin = Number(marginEl.value || 24);
-						updatePresenterPlacementReadout();
-					});
+					if (scaleEl)
+						scaleEl.addEventListener("input", () => {
+							presenterScale = Number(scaleEl.value || 1);
+							updatePresenterPlacementReadout();
+							schedulePresenterPlacementSave();
+						});
+					if (marginEl)
+						marginEl.addEventListener("input", () => {
+							presenterMargin = Number(marginEl.value || 24);
+							updatePresenterPlacementReadout();
+							schedulePresenterPlacementSave();
+						});
 					[
 						"dsk-panel-color",
 						"dsk-text-ok",

@@ -7,6 +7,7 @@ let mainWin;
 let dskWin;
 let localUrl = '';
 let activeOutputDisplayId = null;
+let allowMainClose = false;
 
 async function startLocalCuePi() {
   cuepi = createCuePiServer({
@@ -32,21 +33,23 @@ async function createMainWindow() {
     },
   });
   await mainWin.loadURL(localUrl);
-  mainWin.on('close', async (event) => {
+  mainWin.on('close', (event) => {
+    if (allowMainClose) return;
     if (!dskWin || dskWin.isDestroyed()) return;
-    const choice = await dialog.showMessageBox(mainWin, {
+    event.preventDefault();
+    dialog.showMessageBox(mainWin, {
       type: 'warning',
       buttons: ['Cancel', 'Exit and close DSK'],
       defaultId: 0,
       cancelId: 0,
       title: 'Confirm Exit',
       message: 'DSK output is active. Close CuePi and stop DSK output?',
+    }).then(async (choice) => {
+      if (choice.response !== 1) return;
+      await closeDskWindow();
+      allowMainClose = true;
+      if (mainWin && !mainWin.isDestroyed()) mainWin.close();
     });
-    if (choice.response === 0) {
-      event.preventDefault();
-      return;
-    }
-    await closeDskWindow();
   });
 }
 
@@ -121,6 +124,7 @@ ipcMain.handle('cuepi:toggle-dsk-output', async (_event, payload = {}) => {
 
 app.whenReady().then(createMainWindow);
 app.on('before-quit', async () => {
+  allowMainClose = true;
   await closeDskWindow();
   if (cuepi) await cuepi.stop();
 });
