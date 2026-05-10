@@ -1538,7 +1538,7 @@
 									<div id="desktop-monitor-list" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:8px;"></div>
 									<p class="hint">Blue = moderator display. Green = active output display. Click monitor to toggle output.</p>
 								</div>
-									<div class="field-group" id="output-route-group">
+									<div class="field-group" id="output-route-group" style="display: none">
 									<label class="label" id="output-route-label">HDMI Output</label>
 									<div class="hdmi-row">
 										<div class="select-wrap">
@@ -2486,12 +2486,14 @@
 						if (el) el.style.display = "none";
 					}
 						async function loadRuntimeContext() {
+							const forceDesktop =
+								!!window.cuepiDesktop || /Electron/i.test(navigator.userAgent);
 							try {
 								const res = await fetch('/api/runtime');
 								if (!res.ok) throw new Error(`runtime ${res.status}`);
-							cuepiRuntime = await res.json();
-							const caps = (cuepiRuntime && cuepiRuntime.capabilities) || {};
-							const isPiOutput = !!caps.kioskHdmiOutput;
+								cuepiRuntime = await res.json();
+								const caps = (cuepiRuntime && cuepiRuntime.capabilities) || {};
+								const isPiOutput = forceDesktop ? false : !!caps.kioskHdmiOutput;
 							const routeLabel = document.getElementById("output-route-label");
 								const routeHint = document.getElementById("output-route-hint");
 								const applyBtn = document.getElementById("output-route-apply-btn");
@@ -2530,11 +2532,17 @@
 							if (!caps.softwareUpdate && !caps.systemService) hideSystemGroupById('group-system-mgmt');
 							} catch (error) {
 								console.warn("Runtime context unavailable, using desktop bridge fallback:", error);
-								if (window.cuepiDesktop) {
+								if (forceDesktop) {
 									const desktopDskGroup = document.getElementById("desktop-dsk-open-group");
 									const outputRouteGroup = document.getElementById("output-route-group");
+									const routeLabel = document.getElementById("output-route-label");
+									const routeHint = document.getElementById("output-route-hint");
+									const applyBtn = document.getElementById("output-route-apply-btn");
 									if (desktopDskGroup) desktopDskGroup.style.display = "";
 									if (outputRouteGroup) outputRouteGroup.style.display = "none";
+									if (routeLabel) routeLabel.innerText = "Computer DSK Output";
+									if (routeHint) routeHint.innerText = "Desktop mode uses local computer display output.";
+									if (applyBtn) applyBtn.style.display = "none";
 									await refreshDesktopDisplays();
 								}
 							}
@@ -4454,6 +4462,13 @@
 					refreshDskColorPreviews();
 					applyDskBrandingDefaultsToInputs();
 					setTargetModePreset("manual");
+					if (!!window.cuepiDesktop || /Electron/i.test(navigator.userAgent)) {
+						const desktopDskGroup = document.getElementById("desktop-dsk-open-group");
+						const outputRouteGroup = document.getElementById("output-route-group");
+						if (desktopDskGroup) desktopDskGroup.style.display = "";
+						if (outputRouteGroup) outputRouteGroup.style.display = "none";
+						refreshDesktopDisplays();
+					}
 					loadRuntimeContext();
 					loadDisplayConfig();
 				loadRundown();
