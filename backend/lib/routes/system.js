@@ -56,6 +56,7 @@ function registerSystemRoutes(app, ctx) {
     persistDisplayConfig,
     broadcast,
     serviceName,
+    requireCapability = () => (req, res, next) => next(),
   } = ctx;
 
   app.get('/api/system/export', requireAdmin, (req, res) => {
@@ -139,22 +140,22 @@ function registerSystemRoutes(app, ctx) {
     hardware.restartService();
   });
 
-  app.post('/api/system/restart', requireAdmin, (req, res) => {
+  app.post('/api/system/restart', requireAdmin, requireCapability('systemService'), (req, res) => {
     res.json({ ok: true, status: 'Restarting system service' });
     hardware.restartService();
   });
-  app.post('/api/system/reload-hdmi', requireAdmin, (req, res) => {
+  app.post('/api/system/reload-hdmi', requireAdmin, requireCapability('kioskHdmiOutput'), (req, res) => {
     res.json({ ok: true, status: 'Reloading HDMI output' });
     if (hardware.reloadHdmiOutput) hardware.reloadHdmiOutput();
     else hardware.restartService();
   });
 
-  app.post('/api/system/update', requireAdmin, (req, res) => {
+  app.post('/api/system/update', requireAdmin, requireCapability('softwareUpdate'), (req, res) => {
     res.json({ ok: true, status: 'Pulling firmware and system updates' });
     hardware.updateSystem();
   });
 
-  app.post('/api/system/hostname', requireAdmin, (req, res) => {
+  app.post('/api/system/hostname', requireAdmin, requireCapability('systemService'), (req, res) => {
     const name = req.body && req.body.name;
     if (!name || typeof name !== 'string' || !/^[a-zA-Z0-9-]{1,63}$/.test(name)) return structuredError(res, 400, 'Invalid payload', 'name must be 1-63 chars [a-zA-Z0-9-]');
     hardware.setHostname(name, (error) => {
