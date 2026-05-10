@@ -1015,7 +1015,7 @@
 					</button>
 				</div>
 
-				<div class="sys-group">
+					<div class="sys-group" id="group-wifi">
 					<h3>Wi-Fi Connection</h3>
 					<div class="sys-row">
 						<button onclick="scanWifi()" class="sys-btn" style="width: 100%">
@@ -1044,7 +1044,7 @@
 					></p>
 				</div>
 
-				<div class="sys-group">
+					<div class="sys-group" id="group-static-ip">
 					<h3>Static IP (For Current Wi-Fi)</h3>
 					<p
 						id="current-ip-info"
@@ -1094,7 +1094,7 @@
 					</div>
 				</div>
 
-				<div class="sys-group">
+					<div class="sys-group" id="group-fallback-ap">
 					<div
 						style="
 							display: flex;
@@ -1129,7 +1129,7 @@
 					</div>
 				</div>
 
-				<div class="sys-group">
+					<div class="sys-group" id="group-system-mgmt">
 					<h3>System Management</h3>
 					<div class="sys-row">
 						<input
@@ -2472,6 +2472,24 @@
 			let autoContinueInFlight = false;
 			let rundownFlowMode = "overflow";
 			let v2OnlyMode = false;
+
+				let cuepiRuntime = null;
+					function hideSystemGroupById(id) {
+						const el = document.getElementById(id);
+						if (el) el.style.display = "none";
+					}
+				async function loadRuntimeContext() {
+					try {
+						const res = await fetch('/api/runtime');
+						if (!res.ok) return;
+						cuepiRuntime = await res.json();
+						const caps = (cuepiRuntime && cuepiRuntime.capabilities) || {};
+						if (!caps.wifiManagement) hideSystemGroupById('group-wifi');
+						if (!caps.staticIpManagement) hideSystemGroupById('group-static-ip');
+						if (!caps.fallbackAccessPoint) hideSystemGroupById('group-fallback-ap');
+						if (!caps.softwareUpdate && !caps.systemService) hideSystemGroupById('group-system-mgmt');
+					} catch (_) {}
+				}
 			let selectedTargetISO = null;
 			let selectedTargetRepeatSeconds = 0;
 			let targetModePreset = "manual";
@@ -4294,7 +4312,8 @@
 				updatePresenterPlacementReadout();
 				refreshDskColorPreviews();
 				setTargetModePreset("manual");
-				loadDisplayConfig();
+					loadRuntimeContext();
+					loadDisplayConfig();
 				loadRundown();
 			});
 		</script>
