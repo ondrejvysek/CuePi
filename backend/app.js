@@ -69,10 +69,10 @@ const hardware = createHardware({
   legacyApConnectionName,
 });
 
-const runtimeShell = process.env.CUEPI_SHELL || 'web';
-const runtimeRole = process.env.CUEPI_ROLE || 'standalone';
-const detectedHardware = detectHardware();
-const runtimeCapabilities = createCapabilities({ hardware: detectedHardware, shell: runtimeShell });
+let runtimeShell = process.env.CUEPI_SHELL || 'web';
+let runtimeRole = process.env.CUEPI_ROLE || 'standalone';
+let detectedHardware = detectHardware();
+let runtimeCapabilities = createCapabilities({ hardware: detectedHardware, shell: runtimeShell });
 const runtimeContext = () => ({
   app: 'CuePi',
   version: (() => { try { return require('../package.json').version; } catch (_) { return '0.0.0'; } })(),
@@ -938,6 +938,10 @@ app.use(express.static(path.join(appRoot, 'public')));
 function createCuePiServer(options = {}) {
   bindHost = options.bindHost || bindHost;
   listenPort = Number.isFinite(options.port) ? options.port : listenPort;
+  runtimeShell = options.shell || runtimeShell;
+  runtimeRole = options.role || runtimeRole;
+  detectedHardware = detectHardware();
+  runtimeCapabilities = createCapabilities({ hardware: detectedHardware, shell: runtimeShell });
   return {
     app,
     server,
