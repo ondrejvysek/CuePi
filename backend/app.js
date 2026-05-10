@@ -22,6 +22,7 @@ const { detectHardware } = require('./runtime/detect-hardware');
 const { createCapabilities, detectHardwareProfile } = require('./runtime/capabilities');
 const { registerRuntimeRoutes } = require('./lib/routes/runtime');
 
+const appRoot = process.env.CUEPI_APP_ROOT || path.resolve(__dirname, '..');
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 
@@ -115,9 +116,9 @@ function getNetworkInfo() {
   return { ip: '127.0.0.1', mask: '255.0.0.0' };
 }
 
-const messagesFile = path.join(process.cwd(), 'messages.json');
-const logoFile = path.join(process.cwd(), 'logo.json');
-const logsDir = path.join(process.cwd(), 'logs');
+const messagesFile = path.join(appRoot, 'messages.json');
+const logoFile = path.join(appRoot, 'logo.json');
+const logsDir = path.join(appRoot, 'logs');
 const actualsLogFile = path.join(logsDir, 'actuals.csv');
 let quickMessages = ['Wrap Up Now', 'Q&A Starting', '5 Minutes Left', 'Speak Up'];
 let logoData = '';
@@ -933,7 +934,7 @@ registerSystemRoutes(app, {
   requireCapability,
 });
 
-app.use(express.static(path.join(process.cwd(), 'public')));
+app.use(express.static(path.join(appRoot, 'public')));
 function createCuePiServer(options = {}) {
   bindHost = options.bindHost || bindHost;
   listenPort = Number.isFinite(options.port) ? options.port : listenPort;
@@ -952,4 +953,3 @@ function createCuePiServer(options = {}) {
 }
 
 module.exports = { createCuePiServer };
-
