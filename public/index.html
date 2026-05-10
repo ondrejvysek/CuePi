@@ -2485,10 +2485,10 @@
 						const el = document.getElementById(id);
 						if (el) el.style.display = "none";
 					}
-					async function loadRuntimeContext() {
-						try {
-							const res = await fetch('/api/runtime');
-							if (!res.ok) return;
+						async function loadRuntimeContext() {
+							try {
+								const res = await fetch('/api/runtime');
+								if (!res.ok) throw new Error(`runtime ${res.status}`);
 							cuepiRuntime = await res.json();
 							const caps = (cuepiRuntime && cuepiRuntime.capabilities) || {};
 							const isPiOutput = !!caps.kioskHdmiOutput;
@@ -2528,8 +2528,17 @@
 							if (!caps.staticIpManagement) hideSystemGroupById('group-static-ip');
 							if (!caps.fallbackAccessPoint) hideSystemGroupById('group-fallback-ap');
 							if (!caps.softwareUpdate && !caps.systemService) hideSystemGroupById('group-system-mgmt');
-						} catch (_) {}
-				}
+							} catch (error) {
+								console.warn("Runtime context unavailable, using desktop bridge fallback:", error);
+								if (window.cuepiDesktop) {
+									const desktopDskGroup = document.getElementById("desktop-dsk-open-group");
+									const outputRouteGroup = document.getElementById("output-route-group");
+									if (desktopDskGroup) desktopDskGroup.style.display = "";
+									if (outputRouteGroup) outputRouteGroup.style.display = "none";
+									await refreshDesktopDisplays();
+								}
+							}
+					}
 			let selectedTargetISO = null;
 			let selectedTargetRepeatSeconds = 0;
 			let targetModePreset = "manual";
@@ -4441,9 +4450,10 @@
 						const el = document.getElementById(id);
 						if (el) el.addEventListener("change", scheduleDskBrandingSave);
 					});
-				updatePresenterPlacementReadout();
-				refreshDskColorPreviews();
-				setTargetModePreset("manual");
+					updatePresenterPlacementReadout();
+					refreshDskColorPreviews();
+					applyDskBrandingDefaultsToInputs();
+					setTargetModePreset("manual");
 					loadRuntimeContext();
 					loadDisplayConfig();
 				loadRundown();
