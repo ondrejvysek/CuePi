@@ -3497,6 +3497,16 @@
 				await saveDskBranding();
 			}
 
+				let dskBrandingSaveTimer = null;
+				function scheduleDskBrandingSave() {
+					if (dskBrandingSaveTimer) clearTimeout(dskBrandingSaveTimer);
+					dskBrandingSaveTimer = setTimeout(() => {
+						saveDskBranding().catch((error) =>
+							console.warn("Auto-save DSK branding failed:", error),
+						);
+					}, 180);
+				}
+
 				async function saveDskBranding() {
 				const payload = {
 					dskBranding: {
@@ -3547,16 +3557,7 @@
 				} catch (error) {
 					alert(`Save failed: ${error.message}`);
 				}
-				let dskBrandingSaveTimer = null;
-				function scheduleDskBrandingSave() {
-					if (dskBrandingSaveTimer) clearTimeout(dskBrandingSaveTimer);
-					dskBrandingSaveTimer = setTimeout(() => {
-						saveDskBranding().catch((error) =>
-							console.warn("Auto-save DSK branding failed:", error),
-						);
-					}, 180);
 				}
-			}
 
 			async function savePresenterColors() {
 				const okEl = document.getElementById("presenter-color-ok");
