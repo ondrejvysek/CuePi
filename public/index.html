@@ -1532,6 +1532,7 @@
 										</option>
 									</select>
 									</div>
+									<p class="hint" id="desktop-debug-info" style="margin-top:8px;">Runtime debug: initializing…</p>
 								</div>
 								<div class="field-group" id="desktop-dsk-open-group" style="display: none">
 									<label class="label">Available Monitors</label>
@@ -2486,6 +2487,8 @@
 				let v2OnlyMode = false;
 				let desktopSelectedDisplayId = null;
 				let desktopMonitorSnapshot = null;
+				const isDesktopBridgeAvailable = () =>
+					!!(window.cuepiDesktop && window.cuepiDesktop.isDesktop);
 
 				let cuepiRuntime = null;
 					function hideSystemGroupById(id) {
@@ -2494,11 +2497,15 @@
 					}
 						async function loadRuntimeContext() {
 							const forceDesktop =
-								!!window.cuepiDesktop || /Electron/i.test(navigator.userAgent);
+								isDesktopBridgeAvailable() || /Electron/i.test(navigator.userAgent);
+							const debug = document.getElementById("desktop-debug-info");
+							if (debug)
+								debug.innerText = `Runtime debug: forceDesktop=${forceDesktop}, bridge=${isDesktopBridgeAvailable() ? "yes" : "no"}, uaElectron=${/Electron/i.test(navigator.userAgent)}`;
 							try {
 								const res = await fetch('/api/runtime');
 								if (!res.ok) throw new Error(`runtime ${res.status}`);
 								cuepiRuntime = await res.json();
+								if (debug) debug.innerText += `, runtimeShell=${cuepiRuntime?.shell || "?"}`;
 								const caps = (cuepiRuntime && cuepiRuntime.capabilities) || {};
 								const isPiOutput = forceDesktop ? false : !!caps.kioskHdmiOutput;
 							const routeLabel = document.getElementById("output-route-label");
@@ -2539,6 +2546,7 @@
 							if (!caps.softwareUpdate && !caps.systemService) hideSystemGroupById('group-system-mgmt');
 							} catch (error) {
 								console.warn("Runtime context unavailable, using desktop bridge fallback:", error);
+								if (debug) debug.innerText += `, runtimeFetch=failed`;
 								if (forceDesktop) {
 									const desktopDskGroup = document.getElementById("desktop-dsk-open-group");
 									const outputRouteGroup = document.getElementById("output-route-group");
@@ -2707,15 +2715,21 @@
 					});
 				}
 				async function refreshDesktopDisplays() {
-					if (!window.cuepiDesktop || typeof window.cuepiDesktop.getDisplays !== "function") return;
+					const debug = document.getElementById("desktop-debug-info");
+					if (!window.cuepiDesktop || typeof window.cuepiDesktop.getDisplays !== "function") {
+						if (debug) debug.innerText += " | getDisplays unavailable";
+						return;
+					}
 					try {
 						desktopMonitorSnapshot = await window.cuepiDesktop.getDisplays();
+						if (debug) debug.innerText += ` | displays=${desktopMonitorSnapshot?.displays?.length || 0}`;
 						if (!desktopSelectedDisplayId && desktopMonitorSnapshot?.displays?.[0]) {
 							desktopSelectedDisplayId = desktopMonitorSnapshot.displays[0].id;
 						}
 						renderDesktopDisplays(desktopMonitorSnapshot);
 					} catch (error) {
 						console.warn("Failed to load display list:", error);
+						if (debug) debug.innerText += " | getDisplays error";
 					}
 				}
 			function refreshDskColorPreviews() {
@@ -4469,7 +4483,7 @@
 					refreshDskColorPreviews();
 					applyDskBrandingDefaultsToInputs();
 					setTargetModePreset("manual");
-					if (!!window.cuepiDesktop || /Electron/i.test(navigator.userAgent)) {
+					if (isDesktopBridgeAvailable() || /Electron/i.test(navigator.userAgent)) {
 						const desktopDskGroup = document.getElementById("desktop-dsk-open-group");
 						const outputRouteGroup = document.getElementById("output-route-group");
 						if (desktopDskGroup) desktopDskGroup.style.display = "";
