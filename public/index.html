@@ -1535,7 +1535,7 @@
 								</div>
 								<div class="field-group" id="desktop-dsk-open-group" style="display: none">
 									<label class="label">Available Monitors</label>
-									<div id="desktop-monitor-list" style="display:grid; gap:8px;"></div>
+									<div id="desktop-monitor-list" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px;"></div>
 									<button class="button apply" onclick="openDesktopDskWindow()">
 										🪟 Launch Fullscreen Output
 									</button>
@@ -2615,6 +2615,7 @@
 				}
 				async function openDesktopDskWindow() {
 					try {
+						await saveDisplayProfile();
 						if (window.cuepiDesktop && typeof window.cuepiDesktop.openDskWindow === "function") {
 							await window.cuepiDesktop.openDskWindow({
 								displayId: desktopSelectedDisplayId,
@@ -2632,22 +2633,43 @@
 					if (!list) return;
 					list.innerHTML = "";
 					(snapshot?.displays || []).forEach((display) => {
-						const button = document.createElement("button");
-						button.className = "sys-btn";
-						button.style.textAlign = "left";
-						button.style.width = "100%";
+						const card = document.createElement("button");
+						card.className = "sys-btn";
+						card.style.width = "100%";
+						card.style.display = "grid";
+						card.style.gridTemplateRows = "1fr auto";
+						card.style.aspectRatio = "16 / 9";
+						card.style.borderRadius = "14px";
+						card.style.padding = "14px";
+						card.style.alignItems = "start";
+						card.style.textAlign = "left";
 						const isModerator = String(snapshot.moderatorDisplayId) === String(display.id);
 						const isActive = String(snapshot.activeOutputDisplayId) === String(display.id);
-						button.style.background = isActive ? "#16a34a" : isModerator ? "#2563eb" : "";
-						button.innerText = `${display.isPrimary ? "Primary" : "Display"} ${display.id} • ${display.label}${isModerator ? " • Moderator" : ""}${isActive ? " • Output ON" : ""}`;
-						button.onclick = () => {
+						card.style.background = isActive ? "#16a34a" : isModerator ? "#2563eb" : "#0b1a33";
+						card.style.border = "1px solid #334155";
+						const title = document.createElement("div");
+						title.style.fontWeight = "700";
+						title.style.fontSize = "24px";
+						title.innerText = `${display.isPrimary ? "Display 1" : "Display"}${isModerator ? " Moderator" : ""}`;
+						const sub = document.createElement("div");
+						sub.style.fontSize = "14px";
+						sub.style.opacity = "0.9";
+						sub.innerText = `${display.bounds.width}x${display.bounds.height}`;
+						const status = document.createElement("div");
+						status.style.fontSize = "12px";
+						status.style.justifySelf = "end";
+						status.innerText = isActive ? "● Output ON" : isModerator ? "● Moderator" : "● Available";
+						card.appendChild(title);
+						card.appendChild(sub);
+						card.appendChild(status);
+						card.onclick = () => {
 							desktopSelectedDisplayId = display.id;
 							renderDesktopDisplays(snapshot);
 						};
 						if (String(desktopSelectedDisplayId) === String(display.id)) {
-							button.style.outline = "2px solid #e2e8f0";
+							card.style.outline = "2px solid #e2e8f0";
 						}
-						list.appendChild(button);
+						list.appendChild(card);
 					});
 				}
 				async function refreshDesktopDisplays() {
