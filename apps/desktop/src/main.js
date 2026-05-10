@@ -38,7 +38,10 @@ function getDisplaySnapshot() {
   if (!dskWin || dskWin.isDestroyed()) activeOutputDisplayId = null;
   const displays = screen.getAllDisplays().map((d) => ({
     id: d.id,
-    label: `${d.bounds.width}x${d.bounds.height} @ (${d.bounds.x},${d.bounds.y})`,
+    label: d.label || `Display ${d.id}`,
+    resolution: `${d.bounds.width}x${d.bounds.height}`,
+    scaleFactor: d.scaleFactor,
+    rotation: d.rotation,
     isPrimary: d.id === screen.getPrimaryDisplay().id,
     bounds: d.bounds,
   }));

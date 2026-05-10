@@ -2647,19 +2647,26 @@
 						const sub = document.createElement("div");
 						sub.style.fontSize = "14px";
 						sub.style.opacity = "0.9";
-						sub.innerText = `${display.bounds.width}x${display.bounds.height}`;
+						sub.innerText = `${display.resolution || `${display.bounds.width}x${display.bounds.height}`} • ${display.label || "Unknown model"}`;
+						const hw = document.createElement("div");
+						hw.style.fontSize = "12px";
+						hw.style.opacity = "0.75";
+						hw.innerText = `Scale ${display.scaleFactor || 1}x • Rot ${display.rotation || 0}°`;
 						const status = document.createElement("div");
 						status.style.fontSize = "12px";
 						status.style.justifySelf = "end";
 						status.innerText = isActive ? "● Output ON" : isModerator ? "● Moderator" : "● Available";
 						card.appendChild(title);
 						card.appendChild(sub);
+						card.appendChild(hw);
 						card.appendChild(status);
-							card.onclick = async () => {
-								desktopSelectedDisplayId = display.id;
-								try {
-									await saveDisplayProfile();
-									if (window.cuepiDesktop && typeof window.cuepiDesktop.toggleDskOutput === "function") {
+						card.onclick = async () => {
+							desktopSelectedDisplayId = display.id;
+							try {
+								await saveDisplayProfile();
+								await savePresenterPlacement();
+								await saveDskBranding();
+								if (window.cuepiDesktop && typeof window.cuepiDesktop.toggleDskOutput === "function") {
 										await window.cuepiDesktop.toggleDskOutput({ displayId: display.id });
 										await refreshDesktopDisplays();
 										return;
