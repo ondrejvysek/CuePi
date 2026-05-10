@@ -1,5 +1,5 @@
 const path = require('path');
-const { app, BrowserWindow, ipcMain, screen, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, screen } = require('electron');
 const { createCuePiServer } = require('../../../backend/app');
 
 let cuepi;
@@ -8,6 +8,42 @@ let dskWin;
 let localUrl = '';
 let activeOutputDisplayId = null;
 let allowMainClose = false;
+
+async function showStyledExitConfirm() {
+  return new Promise((resolve) => {
+    const modal = new BrowserWindow({
+      width: 460,
+      height: 220,
+      parent: mainWin || undefined,
+      modal: true,
+      resizable: false,
+      minimizable: false,
+      maximizable: false,
+      autoHideMenuBar: true,
+      webPreferences: { contextIsolation: true, sandbox: false },
+    });
+    const html = `<!doctype html><html><body style="margin:0;font-family:Arial;background:#071a33;color:#e2e8f0;display:flex;align-items:center;justify-content:center;height:100vh;">
+      <div style="width:90%;border:1px solid #334155;border-radius:14px;padding:18px;background:#0b1f3e;">
+        <h3 style="margin:0 0 10px 0;">DSK output is active</h3>
+        <p style="margin:0 0 18px 0;color:#94a3b8;">Close CuePi and stop DSK output?</p>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+          <button onclick="window.confirmExit(false)" style="padding:10px 14px;border-radius:8px;border:1px solid #334155;background:#132b4d;color:#e2e8f0;">Cancel</button>
+          <button onclick="window.confirmExit(true)" style="padding:10px 14px;border-radius:8px;border:0;background:#2563eb;color:white;">Exit and close DSK</button>
+        </div>
+      </div>
+      <script>window.confirmExit=(ok)=>{window.location='cuepi-exit:'+ok}</script>
+    </body></html>`;
+    modal.webContents.on('will-navigate', (e, url) => {
+      if (!url.startsWith('cuepi-exit:')) return;
+      e.preventDefault();
+      const ok = url === 'cuepi-exit:true';
+      resolve(ok);
+      if (!modal.isDestroyed()) modal.close();
+    });
+    modal.on('closed', () => resolve(false));
+    modal.loadURL(`data:text/html,${encodeURIComponent(html)}`);
+  });
+}
 
 async function startLocalCuePi() {
   cuepi = createCuePiServer({
@@ -37,15 +73,8 @@ async function createMainWindow() {
     if (allowMainClose) return;
     if (!dskWin || dskWin.isDestroyed()) return;
     event.preventDefault();
-    dialog.showMessageBox(mainWin, {
-      type: 'warning',
-      buttons: ['Cancel', 'Exit and close DSK'],
-      defaultId: 0,
-      cancelId: 0,
-      title: 'Confirm Exit',
-      message: 'DSK output is active. Close CuePi and stop DSK output?',
-    }).then(async (choice) => {
-      if (choice.response !== 1) return;
+    showStyledExitConfirm().then(async (ok) => {
+      if (!ok) return;
       await closeDskWindow();
       allowMainClose = true;
       if (mainWin && !mainWin.isDestroyed()) mainWin.close();

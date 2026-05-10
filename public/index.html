@@ -3419,6 +3419,16 @@
 				}
 			}
 
+				let presenterPlacementSaveTimer = null;
+				function schedulePresenterPlacementSave() {
+					if (presenterPlacementSaveTimer) clearTimeout(presenterPlacementSaveTimer);
+					presenterPlacementSaveTimer = setTimeout(() => {
+						savePresenterPlacement().catch((error) =>
+							console.warn("Auto-save presenter placement failed:", error),
+						);
+					}, 180);
+				}
+
 				async function savePresenterPlacement() {
 				const scaleEl = document.getElementById("presenter-scale");
 				const marginEl = document.getElementById("presenter-margin");
@@ -3454,16 +3464,7 @@
 				} catch (error) {
 					alert(`Save failed: ${error.message}`);
 				}
-				let presenterPlacementSaveTimer = null;
-				function schedulePresenterPlacementSave() {
-					if (presenterPlacementSaveTimer) clearTimeout(presenterPlacementSaveTimer);
-					presenterPlacementSaveTimer = setTimeout(() => {
-						savePresenterPlacement().catch((error) =>
-							console.warn("Auto-save presenter placement failed:", error),
-						);
-					}, 180);
 				}
-			}
 
 			function applyDskBrandingDefaultsToInputs() {
 				const set = (id, val) => {
