@@ -35,6 +35,7 @@ async function createMainWindow() {
 }
 
 function getDisplaySnapshot() {
+  if (!dskWin || dskWin.isDestroyed()) activeOutputDisplayId = null;
   const displays = screen.getAllDisplays().map((d) => ({
     id: d.id,
     label: `${d.bounds.width}x${d.bounds.height} @ (${d.bounds.x},${d.bounds.y})`,
@@ -74,11 +75,29 @@ async function openDskWindow(displayId = null) {
   dskWin.on('closed', () => { dskWin = null; activeOutputDisplayId = null; });
 }
 
+async function closeDskWindow() {
+  if (dskWin && !dskWin.isDestroyed()) {
+    dskWin.close();
+  }
+  dskWin = null;
+  activeOutputDisplayId = null;
+}
+
 ipcMain.handle('cuepi:get-displays', async () => getDisplaySnapshot());
 
 ipcMain.handle('cuepi:open-dsk-window', async (_event, payload = {}) => {
   await openDskWindow(payload.displayId || null);
   return { ok: true };
+});
+
+ipcMain.handle('cuepi:toggle-dsk-output', async (_event, payload = {}) => {
+  const displayId = payload.displayId || null;
+  if (activeOutputDisplayId && String(activeOutputDisplayId) === String(displayId)) {
+    await closeDskWindow();
+    return { ok: true, active: false };
+  }
+  await openDskWindow(displayId);
+  return { ok: true, active: true };
 });
 
 app.whenReady().then(createMainWindow);

@@ -1536,12 +1536,9 @@
 								<div class="field-group" id="desktop-dsk-open-group" style="display: none">
 									<label class="label">Available Monitors</label>
 									<div id="desktop-monitor-list" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px;"></div>
-									<button class="button apply" onclick="openDesktopDskWindow()">
-										🪟 Launch Fullscreen Output
-									</button>
-									<p class="hint">Blue = moderator display. Green = active output display.</p>
+									<p class="hint">Blue = moderator display. Green = active output display. Click monitor to toggle output.</p>
 								</div>
-									<div class="field-group">
+									<div class="field-group" id="output-route-group">
 									<label class="label" id="output-route-label">HDMI Output</label>
 									<div class="hdmi-row">
 										<div class="select-wrap">
@@ -2501,6 +2498,7 @@
 								const optPresenter = document.getElementById("hdmi-opt-presenter");
 								const optDsk = document.getElementById("hdmi-opt-dsk");
 								const desktopDskGroup = document.getElementById("desktop-dsk-open-group");
+								const outputRouteGroup = document.getElementById("output-route-group");
 								if (isPiOutput) {
 								if (routeLabel) routeLabel.innerText = "HDMI Output";
 								if (routeHint) routeHint.innerText = "Applying HDMI view will restart the output.";
@@ -2508,6 +2506,11 @@
 									if (optPresenter) optPresenter.innerText = "HDMI: Classic Presenter";
 									if (optDsk) optDsk.innerText = "HDMI: DSK Presenter";
 									if (desktopDskGroup) desktopDskGroup.style.display = "none";
+									if (outputRouteGroup) outputRouteGroup.style.display = "";
+									if (desktopDisplayRefreshTimer) {
+										clearInterval(desktopDisplayRefreshTimer);
+										desktopDisplayRefreshTimer = null;
+									}
 								} else {
 								if (routeLabel) routeLabel.innerText = "Computer DSK Output";
 								if (routeHint) routeHint.innerText = "Desktop mode uses local computer display output.";
@@ -2515,7 +2518,11 @@
 									if (optPresenter) optPresenter.innerText = "Computer: Classic Presenter";
 									if (optDsk) optDsk.innerText = "Computer: DSK Presenter";
 									if (desktopDskGroup) desktopDskGroup.style.display = "";
+									if (outputRouteGroup) outputRouteGroup.style.display = "none";
 									await refreshDesktopDisplays();
+									if (!desktopDisplayRefreshTimer) {
+										desktopDisplayRefreshTimer = setInterval(refreshDesktopDisplays, 3000);
+									}
 								}
 							if (!caps.wifiManagement) hideSystemGroupById('group-wifi');
 							if (!caps.staticIpManagement) hideSystemGroupById('group-static-ip');
@@ -2613,21 +2620,7 @@
 					"popup=yes,menubar=no,toolbar=no,location=no,status=no,scrollbars=no,resizable=yes,fullscreen=yes,width=1920,height=1080",
 					);
 				}
-				async function openDesktopDskWindow() {
-					try {
-						await saveDisplayProfile();
-						if (window.cuepiDesktop && typeof window.cuepiDesktop.openDskWindow === "function") {
-							await window.cuepiDesktop.openDskWindow({
-								displayId: desktopSelectedDisplayId,
-							});
-							await refreshDesktopDisplays();
-							return;
-						}
-					} catch (error) {
-						console.warn("Desktop DSK open failed:", error);
-					}
-					openPresenterOutputWindow("/presenter-dsk.html");
-				}
+				let desktopDisplayRefreshTimer = null;
 				function renderDesktopDisplays(snapshot) {
 					const list = document.getElementById("desktop-monitor-list");
 					if (!list) return;
@@ -2662,10 +2655,20 @@
 						card.appendChild(title);
 						card.appendChild(sub);
 						card.appendChild(status);
-						card.onclick = () => {
-							desktopSelectedDisplayId = display.id;
-							renderDesktopDisplays(snapshot);
-						};
+							card.onclick = async () => {
+								desktopSelectedDisplayId = display.id;
+								try {
+									await saveDisplayProfile();
+									if (window.cuepiDesktop && typeof window.cuepiDesktop.toggleDskOutput === "function") {
+										await window.cuepiDesktop.toggleDskOutput({ displayId: display.id });
+										await refreshDesktopDisplays();
+										return;
+									}
+								} catch (error) {
+									console.warn("Toggle DSK output failed:", error);
+								}
+								renderDesktopDisplays(snapshot);
+							};
 						if (String(desktopSelectedDisplayId) === String(display.id)) {
 							card.style.outline = "2px solid #e2e8f0";
 						}
